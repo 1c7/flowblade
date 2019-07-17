@@ -19,7 +19,7 @@
 """
 
 """
-Module contains absolute paths to various resources.
+Module contains absolute paths to various resources set at launch.
 """
 
 ROOT_PATH = None

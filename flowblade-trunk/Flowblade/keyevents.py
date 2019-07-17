@@ -73,6 +73,14 @@ def key_down(widget, event):
             gui.big_tc.set_visible_child_name("BigTCDisplay")
             return True
 
+    if event.keyval == Gdk.KEY_F3:
+        import sys
+        import respaths
+        sys.path.insert(0, respaths.ROOT_PATH + "/res")
+        import effectimgcreator
+        effectimgcreator.write_out_eff_imgs()
+        return True
+        
     # Compositor editors keyevents
     was_handled = _handle_geometry_editor_keys(event)
     if was_handled:
@@ -151,11 +159,7 @@ def key_down(widget, event):
         menuactions.toggle_fullscreen()
         return True
 
-    #debug.test help 
-    if event.keyval == Gdk.KEY_F12:
-        if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
-            rotomask.show_rotomask()
-        return True
+
 
     # Key event was not handled here.
     return False

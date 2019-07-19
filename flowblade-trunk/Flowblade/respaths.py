@@ -29,6 +29,7 @@ IMAGE_PATH = None
 PROFILE_PATH = None
 PREFS_PATH = None
 WIPE_RESOURCES_PATH = None
+EFFECTS_ICONS_PATH = None
 FILTERS_XML_DOC = None
 COMPOSITORS_XML_DOC = None
 REPLACEMENTS_XML_DOC = None
@@ -52,7 +53,7 @@ def set_paths(root_path):
     GPL_3_DOC, ROOT_PARENT, PATTERN_PRODUCER_PATH, TRANSLATIONS_DOC, \
     LAUNCH_DIR, REPLACEMENTS_XML_DOC, GMIC_SCRIPTS_DOC,  \
     PHANTOM_JAR, PHANTOM_DIR, DEVELOPERS_DOC, CONTRIBUTORS_DOC, \
-    SHORTCUTS_PATH
+    SHORTCUTS_PATH, EFFECTS_ICONS_PATH
     
     ROOT_PATH = root_path
     IMAGE_PATH = root_path + "/res/img/"
@@ -76,6 +77,7 @@ def set_paths(root_path):
     PHANTOM_JAR = root_path + "/phantom2d/Phantom2D.jar"
     # Apr-2017 - SvdB
     SHORTCUTS_PATH = root_path + "/res/shortcuts/"
+    EFFECTS_ICONS_PATH = root_path + "/res/filters/icons/"
 
 def apply_dark_theme():
     global IMAGE_PATH

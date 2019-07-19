@@ -337,13 +337,13 @@ class MediaFile:
  
     def create_icon(self):
         try:
-            self.icon = self._create_image_surface(self.icon_path)
+            self.icon = self._create_image_surface()
         except:
             print "failed to make icon from:", self.icon_path
             self.icon_path = respaths.IMAGE_PATH + FALLBACK_THUMB
             self.icon = self._create_image_surface(self.icon_path)
 
-    def _create_image_surface(self, path):
+    def _create_image_surface(self):
         icon = cairo.ImageSurface.create_from_png(self.icon_path)
         scaled_icon = cairo.ImageSurface(cairo.FORMAT_ARGB32, appconsts.THUMB_WIDTH, appconsts.THUMB_HEIGHT)
         cr = cairo.Context(scaled_icon)

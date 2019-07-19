@@ -74,11 +74,8 @@ def key_down(widget, event):
             return True
 
     if event.keyval == Gdk.KEY_F3:
-        import sys
-        import respaths
-        sys.path.insert(0, respaths.ROOT_PATH + "/res")
-        import effectimgcreator
-        effectimgcreator.write_out_eff_imgs()
+        import effectsdndsource
+        effectsdndsource.write_out_eff_imgs()
         return True
         
     # Compositor editors keyevents

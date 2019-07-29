@@ -43,21 +43,22 @@ ITEM_HEIGHT = appconsts.THUMB_HEIGHT
 
 # ---------------------------------------------------------- interface
 def get_test_panel():
-    panel = Gtk.VBox()
+    stack_panel = Gtk.Stack()
+    panels = []
     for group in mltfilters.groups:
         name, finfos = group
+
         group_panel = ItemGroupPanel(finfos)
         group_panel.create_widgets()
         
-        expander = Gtk.Expander.new(name)
-        expander.add(group_panel.widget)
+        panels.append(group_panel)
 
-        panel.pack_start(expander, False, False, 0)
+        stack_panel.add_named(group_panel.widget, name)
 
-    panel.pack_start(Gtk.Label(), True, True, 0)
+    stack_panel.set_visible_child(panels[3].widget)
     
     view = Gtk.Viewport()
-    view.add(panel)
+    view.add(stack_panel)
     view.set_shadow_type(Gtk.ShadowType.NONE)
 
     effects_scroll_window = Gtk.ScrolledWindow()

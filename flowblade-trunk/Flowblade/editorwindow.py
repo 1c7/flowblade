@@ -43,6 +43,7 @@ import dnd
 import editevent
 import editorpersistance
 import editorstate
+import effectsdndsource
 import exporting
 import glassbuttons
 import gmic
@@ -499,6 +500,12 @@ class EditorWindow:
         dnd.connect_effects_select_tree_view(self.effect_select_list_view.treeview)
 
 
+        effect_dnd_panel = effectsdndsource.get_test_panel()
+
+
+
+
+
 
         clip_editor_panel, info_row = clipeffectseditor.get_clip_effects_editor_panel(
                                         self.effect_select_combo_box,
@@ -774,6 +781,7 @@ class EditorWindow:
         tline_hbox_2 = Gtk.HBox()
         tline_hbox_2.pack_start(self.tline_column.widget, False, False, 0)
         tline_hbox_2.pack_start(self.tline_canvas.widget, True, True, 0)
+        tline_hbox_2.pack_start(effect_dnd_panel.widget, False, False, 0)
         
         # Bottom row filler
         self.left_corner = guicomponents.TimeLineLeftBottom()

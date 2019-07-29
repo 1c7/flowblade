@@ -18,13 +18,16 @@
     along with Flowblade Movie Editor. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from gi.repository import Gtk, Gdk, Pango
 
 import cairo
 import mlt
 import os
 
 import appconsts
+import cairoarea
 import editorstate
+import guiutils
 import mltfilters
 import respaths
 
@@ -32,13 +35,25 @@ OUT_FOLDER = "/home/janne/codes/docs/Flowblade/art/effimgs/"
 
 SOURCE_IMGS = ["/home/janne/codes/docs/Flowblade/art/eff_img_source1.png"]
 
+EFFECT_ITEM = 0
 
+ITEM_WIDTH = appconsts.THUMB_WIDTH
+ITEM_HEIGHT = appconsts.THUMB_HEIGHT
 
+# ---------------------------------------------------------- interface
+def get_test_panel():
+    name, finfos = mltfilters.groups[3]
+    panel = ItemGroupPanel(finfos)
+    panel.fill_data_model()
+
+    panel.widget.set_size_request(300, 250)
+
+    return panel
 
     
 
 # -------------------------------------------- media select panel
-class EffectGroupPanel():
+class ItemGroupPanel():
 
     def __init__(self, group):
         self.widget = Gtk.VBox()
@@ -46,14 +61,13 @@ class EffectGroupPanel():
         self.row_widgets = []
         self.selected_object = None
         self.columns = 4
-        self.double_click_cb = double_click_cb
-
-
-        
-
+        #self.double_click_cb = double_click_cb
 
     def get_selected_media_object(self):
         return self.selected_object
+
+    def item_selected(self, item, widget, event):
+        print "item selected"
 
     """
     def media_object_selected(self, media_object, widget, event):
@@ -179,22 +193,22 @@ class EffectGroupPanel():
         for w in self.row_widgets:
             self.widget.remove(w)
         self.row_widgets = []
-        self.widget_for_mediafile = {}
-        self.selected_objects = []
+        self.widget_for_effect = {}
+        self.selected_objects = None
 
         column = 0
 
         row_box = Gtk.HBox()
-        dnd.connect_media_drop_widget(row_box)
-        row_box.set_size_request(MEDIA_OBJECT_WIDGET_WIDTH * self.columns, MEDIA_OBJECT_WIDGET_HEIGHT)
+        #dnd.connect_media_drop_widget(row_box)
+        row_box.set_size_request(ITEM_WIDTH * self.columns, ITEM_HEIGHT)
         for filter_info in self.group:
             
-            effect_widget = EffectDNDWidget(filter_info, self.media_object_selected)
-            dnd.connect_media_files_object_widget(effect_widget.widget)
-            dnd.connect_media_files_object_cairo_widget(effect_widget.img)
+            item_widget = ItemDNDWidget(filter_info, EFFECT_ITEM, self.item_selected)
+            #dnd.connect_media_files_object_widget(effect_widget.widget)
+            #dnd.connect_media_files_object_cairo_widget(effect_widget.img)
             
             #self.widget_for_mediafile[media_file] = media_object
-            row_box.pack_start(effect_widget.widget, False, False, 0)
+            row_box.pack_start(item_widget.widget, False, False, 0)
             column += 1
             if column == self.columns:
                 filler = self._get_empty_filler()
@@ -231,32 +245,32 @@ class EffectGroupPanel():
         """
     
     
-class EffectDNDWidget:
+class ItemDNDWidget:
 
-    def __init__(self, filter_info, selected_callback):
-        self.media_file = media_file
+    def __init__(self, item_data, item_type, selected_callback):
+        self.item_data = item_data
         self.selected_callback = selected_callback
 
         self.widget = Gtk.EventBox()
-        self.widget.connect("button-press-event", lambda w,e: selected_callback(self, w, e))
-        self.widget.connect("button-release-event", lambda w,e: release_callback(self, w, e))
+        #self.widget.connect("button-press-event", lambda w,e: selected_callback(self, w, e))
+        #self.widget.connect("button-release-event", lambda w,e: release_callback(self, w, e))
         #self.widget.dnd_media_widget_attr = True # this is used to identify widget at dnd drop
         self.widget.set_can_focus(True)
         self.widget.add_events(Gdk.EventMask.KEY_PRESS_MASK)
         self.vbox = Gtk.VBox()
 
-        self.icon = cairo.ImageSurface.create_from_png(respaths.EFFECTS_ICONS_PATH + filter_info.mlt_service_id + ".png")
+        if item_type == EFFECT_ITEM:
+            self.icon = cairo.ImageSurface.create_from_png(respaths.EFFECTS_ICONS_PATH + item_data.mlt_service_id + ".png")
+            txt = Gtk.Label(label=item_data.name)
 
-        self.img = cairoarea.CairoDrawableArea2(appconsts.THUMB_WIDTH, appconsts.THUMB_HEIGHT, self._draw_icon)
+        # more cases here later
+        
+        self.img = cairoarea.CairoDrawableArea2(ITEM_WIDTH, ITEM_HEIGHT, self._draw_icon)
         self.img.press_func = self._press
 
-
-        txt = Gtk.Label(label=filter_info.name)
         txt.modify_font(Pango.FontDescription("sans 9"))
         txt.set_max_width_chars(13)
-      
         txt.set_ellipsize(Pango.EllipsizeMode.END)
-
 
         self.vbox.pack_start(self.img, True, True, 0)
         self.vbox.pack_start(txt, False, False, 0)
@@ -265,22 +279,6 @@ class EffectDNDWidget:
 
         self.widget.add(self.align)
 
-    def _get_matches_profile(self):
-        if (not hasattr(self.media_file, "info")): # to make really sure that old projects don't crash,
-            return True                            # but probably is not needed as attr is added at load
-        if self.media_file.info == None:
-            return True
-
-        is_match = True # this is true for audio and graphics and image sequences and is only
-                        # set false for video that does not match profile
-
-        if self.media_file.type == appconsts.VIDEO:
-            best_media_profile_index = mltprofiles.get_closest_matching_profile_index(self.media_file.info)
-            project_profile_index = mltprofiles.get_index_for_name(PROJECT().profile.description())
-            if best_media_profile_index != project_profile_index:
-                is_match = False
-
-        return is_match
 
     def _press(self, event):
         self.selected_callback(self, self.widget, event)
@@ -289,60 +287,23 @@ class EffectDNDWidget:
         x, y, w, h = allocation
         cr.set_source_surface(self.icon, 0, 0)
         cr.paint()
-        if self.media_file == editorstate.MONITOR_MEDIA_FILE():
-            cr.set_source_surface(self.indicator_icon, 29, 22)
-            cr.paint()
 
         cr.select_font_face ("sans-serif",
                  cairo.FONT_SLANT_NORMAL,
                  cairo.FONT_WEIGHT_NORMAL)
         cr.set_font_size(9)
-        if self.media_file.mark_in != -1 and self.media_file.mark_out != -1:
-            cr.set_source_rgba(0,0,0,0.5)
-            cr.rectangle(21,1,72,12)
-            cr.fill()
+
+
+        #cr.set_source_rgba(0,0,0,0.5)
+        #cr.rectangle(28,75,62,12)
+        #cr.fill()
             
-            cr.move_to(23, 10)
-            clip_length = utils.get_tc_string(self.media_file.mark_out - self.media_file.mark_in + 1) #+1 out incl.
-            cr.set_source_rgb(1, 1, 1)
-            cr.show_text("][ " + str(clip_length))
-
-        cr.set_source_rgba(0,0,0,0.5)
-        cr.rectangle(28,75,62,12)
-        cr.fill()
+        #cr.move_to(30, 84)
+        ##cr.set_source_rgb(1, 1, 1)
+        #media_length = utils.get_tc_string(self.media_file.length)
+        #cr.show_text(str(media_length))
             
-        cr.move_to(30, 84)
-        cr.set_source_rgb(1, 1, 1)
-        media_length = utils.get_tc_string(self.media_file.length)
-        cr.show_text(str(media_length))
-            
-        if self.media_file.type != appconsts.PATTERN_PRODUCER:
-            if self.media_file.is_proxy_file == True:
-                cr.set_source_surface(is_proxy_icon, 96, 6)
-                cr.paint()
-            elif self.media_file.has_proxy_file == True:
-                cr.set_source_surface(has_proxy_icon, 96, 6)
-                cr.paint()
 
-        if self.matches_project_profile == False:
-            cr.set_source_surface(profile_warning_icon, 4, 70)
-            cr.paint()
-
-        if self.media_file.type == appconsts.IMAGE:
-            cr.set_source_surface(graphics_icon, 6, 6)
-            cr.paint()
-
-        if self.media_file.type == appconsts.IMAGE_SEQUENCE:
-            cr.set_source_surface(imgseq_icon, 6, 6)
-            cr.paint()
-
-        if self.media_file.type == appconsts.AUDIO:
-            cr.set_source_surface(audio_icon, 6, 6)
-            cr.paint()
-
-        if self.media_file.type == appconsts.PATTERN_PRODUCER:
-            cr.set_source_surface(pattern_icon, 6, 6)
-            cr.paint()
             
 # -------------------------------------------------------------------------- image creation helpers    
 def write_out_eff_imgs():
@@ -388,13 +349,9 @@ def write_image(profile, source_path, filter_info):
     
 def create_effect_icons(folder):
     for f in os.listdir(folder):
-        print os.path.abspath(f)
         large_img_path = folder + f
-        print large_img_path
         icon = _create_image_surface(large_img_path)
-        #print os.path.basename(f)
         icon_file_path = respaths.EFFECTS_ICONS_PATH + f
-        print icon_file_path
         icon.write_to_png(icon_file_path)
 
 def _create_image_surface(icon_path):

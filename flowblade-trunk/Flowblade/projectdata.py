@@ -435,7 +435,7 @@ class Bin:
     Group of media files
     """
     def __init__(self, name="name"):
-        self.name  = name # Displayed name
+        self.name = name # Displayed name
         self.file_ids = [] # List of media files ids in the bin.
                            # Ids are increasing integers given in 
                            # Project.add_media_file(...)

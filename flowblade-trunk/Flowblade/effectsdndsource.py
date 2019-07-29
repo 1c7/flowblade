@@ -40,17 +40,34 @@ EFFECT_ITEM = 0
 ITEM_WIDTH = appconsts.THUMB_WIDTH
 ITEM_HEIGHT = appconsts.THUMB_HEIGHT
 
+
 # ---------------------------------------------------------- interface
 def get_test_panel():
-    name, finfos = mltfilters.groups[3]
-    panel = ItemGroupPanel(finfos)
-    panel.fill_data_model()
+    panel = Gtk.VBox()
+    for group in mltfilters.groups:
+        name, finfos = group
+        group_panel = ItemGroupPanel(finfos)
+        group_panel.create_widgets()
+        
+        expander = Gtk.Expander.new(name)
+        expander.add(group_panel.widget)
 
-    panel.widget.set_size_request(300, 250)
+        panel.pack_start(expander, False, False, 0)
 
-    return panel
-
+    panel.pack_start(Gtk.Label(), True, True, 0)
     
+    view = Gtk.Viewport()
+    view.add(panel)
+    view.set_shadow_type(Gtk.ShadowType.NONE)
+
+    effects_scroll_window = Gtk.ScrolledWindow()
+    effects_scroll_window.add(view)
+    effects_scroll_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+    effects_scroll_window.set_size_request(600, 250)
+    effects_scroll_window.show_all()
+        
+    return effects_scroll_window
+
 
 # -------------------------------------------- media select panel
 class ItemGroupPanel():
@@ -189,7 +206,7 @@ class ItemGroupPanel():
         self.selected_object = None
 
 
-    def fill_data_model(self):
+    def create_widgets(self):
         for w in self.row_widgets:
             self.widget.remove(w)
         self.row_widgets = []
@@ -260,7 +277,12 @@ class ItemDNDWidget:
         self.vbox = Gtk.VBox()
 
         if item_type == EFFECT_ITEM:
-            self.icon = cairo.ImageSurface.create_from_png(respaths.EFFECTS_ICONS_PATH + item_data.mlt_service_id + ".png")
+            try:
+                self.icon = cairo.ImageSurface.create_from_png(respaths.EFFECTS_ICONS_PATH + item_data.mlt_service_id + ".png")
+            except:
+                icon_path = respaths.IMAGE_PATH + "audio_file.png"
+                self.icon = cairo.ImageSurface.create_from_png(icon_path)
+                
             txt = Gtk.Label(label=item_data.name)
 
         # more cases here later

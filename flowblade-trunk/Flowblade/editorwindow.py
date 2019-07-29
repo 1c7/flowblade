@@ -781,7 +781,7 @@ class EditorWindow:
         tline_hbox_2 = Gtk.HBox()
         tline_hbox_2.pack_start(self.tline_column.widget, False, False, 0)
         tline_hbox_2.pack_start(self.tline_canvas.widget, True, True, 0)
-        tline_hbox_2.pack_start(effect_dnd_panel.widget, False, False, 0)
+        tline_hbox_2.pack_start(effect_dnd_panel, False, False, 0)
         
         # Bottom row filler
         self.left_corner = guicomponents.TimeLineLeftBottom()

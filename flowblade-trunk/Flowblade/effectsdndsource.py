@@ -40,6 +40,7 @@ EFFECT_ITEM = 0
 ITEM_WIDTH = appconsts.THUMB_WIDTH
 ITEM_HEIGHT = appconsts.THUMB_HEIGHT
 
+_columns = 3
 
 # ---------------------------------------------------------- interface
 def get_test_panel():
@@ -56,7 +57,8 @@ def get_test_panel():
         stack_panel.add_named(group_panel.widget, name)
 
     stack_panel.set_visible_child(panels[3].widget)
-    
+    stack_panel.set_size_request(_columns * ITEM_WIDTH + 60, 250)  # remove, probably
+
     view = Gtk.Viewport()
     view.add(stack_panel)
     view.set_shadow_type(Gtk.ShadowType.NONE)
@@ -64,7 +66,7 @@ def get_test_panel():
     effects_scroll_window = Gtk.ScrolledWindow()
     effects_scroll_window.add(view)
     effects_scroll_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-    effects_scroll_window.set_size_request(600, 250)
+    effects_scroll_window.set_size_request(_columns * ITEM_WIDTH + 40, 250)
     effects_scroll_window.show_all()
         
     return effects_scroll_window
@@ -78,7 +80,7 @@ class ItemGroupPanel():
         self.group = group
         self.row_widgets = []
         self.selected_object = None
-        self.columns = 4
+        self.columns = 3
         #self.double_click_cb = double_click_cb
 
     def get_selected_media_object(self):

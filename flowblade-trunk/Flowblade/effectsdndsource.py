@@ -28,6 +28,7 @@ import appconsts
 import cairoarea
 import editorstate
 import guiutils
+import guicomponents
 import mltfilters
 import respaths
 
@@ -44,6 +45,33 @@ _columns = 3
 
 # ---------------------------------------------------------- interface
 def get_test_panel():
+
+    effects_list_view = guicomponents.FilterListView()
+    group_combo_box = Gtk.ComboBoxText()
+
+    for group in mltfilters.groups:
+        group_name, filters_array = group
+        group_combo_box.append_text(group_name)
+    group_combo_box.set_active(0)    
+
+    # Same callback function works for filter select window too
+    group_combo_box.connect("changed", 
+                            lambda w,e: _group_selection_changed(w,effects_list_view), 
+                            None)
+
+    combo_row = Gtk.HBox(False, 2)
+    combo_row.pack_start(group_combo_box, True, True, 0)
+    
+    group_name, filters_array = mltfilters.groups[0]
+    effects_list_view.fill_data_model(filters_array)
+    effects_list_view.treeview.get_selection().select_path("0")
+        
+    effects_vbox = Gtk.VBox(False, 2)
+    effects_vbox.pack_start(combo_row, False, False, 0)
+    effects_vbox.pack_start(effects_list_view, True, True, 0)
+    
+    return guiutils.set_margins(effects_vbox, 8, 8, 8, 8)
+    """
     stack_panel = Gtk.Stack()
     panels = []
     for group in mltfilters.groups:
@@ -70,8 +98,13 @@ def get_test_panel():
     effects_scroll_window.show_all()
         
     return effects_scroll_window
+    """
 
-
+def _group_selection_changed(group_combo, filters_list_view):
+    group_name, filters_array = mltfilters.groups[group_combo.get_active()]
+    filters_list_view.fill_data_model(filters_array)
+    filters_list_view.treeview.get_selection().select_path("0")
+    
 # -------------------------------------------- media select panel
 class ItemGroupPanel():
 
@@ -87,110 +120,111 @@ class ItemGroupPanel():
         return self.selected_object
 
     def item_selected(self, item, widget, event):
-        print "item selected"
+        pass
+        #print "item selected"
 
-    """
-    def media_object_selected(self, media_object, widget, event):
-        if event.type == Gdk.EventType._2BUTTON_PRESS:
-            self.double_click_release = True
-            self.clear_selection()
-            media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
-            self.selected_objects.append(media_object)
-            self.widget.queue_draw()
-            gui.pos_bar.widget.grab_focus()
-            GLib.idle_add(self.double_click_cb, media_object.media_file)
-            return
-
-        # HACK! We're using event times to exclude double events when icon is pressed
-        now = time.time()
-        if (now - self.last_event_time) < 0.05:
-            self.last_event_time = now
-            return
-        self.last_event_time = now
-
-        widget.grab_focus()
-
-        if event.button == 1:
-            if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
-                
-                # add to selected if not there
-                try:
-                    index = self.selected_objects.index(media_object)
-                except:
-                    self.selected_objects.append(media_object)
-                    media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
-                    self.last_ctrl_selected_media_object = media_object
-                    return
-            elif (event.get_state() & Gdk.ModifierType.SHIFT_MASK) and len(self.selected_objects) > 0:
-                # Get data on current selection and pressed media object
-                first_selected = -1
-                last_selected = -1
-                pressed_widget = -1
-                for i in range(0, len(current_bin().file_ids)):
-                    file_id = current_bin().file_ids[i]
-                    m_file = PROJECT().media_files[file_id]
-                    m_obj = self.widget_for_mediafile[m_file]
-                    if m_obj in self.selected_objects:
-                        selected = True
-                    else:
-                        selected = False
-                    
-                    if selected and first_selected == -1:
-                        first_selected = i
-                    if selected:
-                        last_selected = i
-                    if media_object == m_obj:
-                        pressed_widget = i
-                
-                # Get new selection range
-                if pressed_widget < first_selected:
-                    sel_range = (pressed_widget, first_selected)
-                elif pressed_widget > last_selected:
-                    sel_range = (last_selected, pressed_widget)
-                else:
-                    sel_range = (pressed_widget, pressed_widget)
-                    
-                self.clear_selection()
-                
-                # Select new range
-                start, end = sel_range
-                for i in range(start, end + 1):
-                    file_id = current_bin().file_ids[i]
-                    m_file = PROJECT().media_files[file_id]
-                    m_obj = self.widget_for_mediafile[m_file]
-                    
-                    self.selected_objects.append(m_obj)
-                    m_obj.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
-            else:
+        """
+        def media_object_selected(self, media_object, widget, event):
+            if event.type == Gdk.EventType._2BUTTON_PRESS:
+                self.double_click_release = True
                 self.clear_selection()
                 media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
                 self.selected_objects.append(media_object)
+                self.widget.queue_draw()
+                gui.pos_bar.widget.grab_focus()
+                GLib.idle_add(self.double_click_cb, media_object.media_file)
+                return
 
+            # HACK! We're using event times to exclude double events when icon is pressed
+            now = time.time()
+            if (now - self.last_event_time) < 0.05:
+                self.last_event_time = now
+                return
+            self.last_event_time = now
 
-        self.widget.queue_draw()
-        """
-    
-    """
-    def release_on_media_object(self, media_object, widget, event):
-        if self.last_ctrl_selected_media_object == media_object:
-            self.last_ctrl_selected_media_object = None
-            return
-        
-        if not self.double_click_release:
             widget.grab_focus()
-        else:
-            self.double_click_release = False # after double click we want bos bar to have focus
+
+            if event.button == 1:
+                if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
+                    
+                    # add to selected if not there
+                    try:
+                        index = self.selected_objects.index(media_object)
+                    except:
+                        self.selected_objects.append(media_object)
+                        media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
+                        self.last_ctrl_selected_media_object = media_object
+                        return
+                elif (event.get_state() & Gdk.ModifierType.SHIFT_MASK) and len(self.selected_objects) > 0:
+                    # Get data on current selection and pressed media object
+                    first_selected = -1
+                    last_selected = -1
+                    pressed_widget = -1
+                    for i in range(0, len(current_bin().file_ids)):
+                        file_id = current_bin().file_ids[i]
+                        m_file = PROJECT().media_files[file_id]
+                        m_obj = self.widget_for_mediafile[m_file]
+                        if m_obj in self.selected_objects:
+                            selected = True
+                        else:
+                            selected = False
+                        
+                        if selected and first_selected == -1:
+                            first_selected = i
+                        if selected:
+                            last_selected = i
+                        if media_object == m_obj:
+                            pressed_widget = i
+                    
+                    # Get new selection range
+                    if pressed_widget < first_selected:
+                        sel_range = (pressed_widget, first_selected)
+                    elif pressed_widget > last_selected:
+                        sel_range = (last_selected, pressed_widget)
+                    else:
+                        sel_range = (pressed_widget, pressed_widget)
+                        
+                    self.clear_selection()
+                    
+                    # Select new range
+                    start, end = sel_range
+                    for i in range(start, end + 1):
+                        file_id = current_bin().file_ids[i]
+                        m_file = PROJECT().media_files[file_id]
+                        m_obj = self.widget_for_mediafile[m_file]
+                        
+                        self.selected_objects.append(m_obj)
+                        m_obj.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
+                else:
+                    self.clear_selection()
+                    media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
+                    self.selected_objects.append(media_object)
+
+
+            self.widget.queue_draw()
+        """
+        
+        """
+        def release_on_media_object(self, media_object, widget, event):
+            if self.last_ctrl_selected_media_object == media_object:
+                self.last_ctrl_selected_media_object = None
+                return
             
-        if event.button == 1:
-            if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
-                # remove from selected if already there
-                try:
-                    index = self.selected_objects.index(media_object)
-                    self.selected_objects.remove(media_object)
-                    media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_bg_color())
-                except:
-                    pass
-    """
+            if not self.double_click_release:
+                widget.grab_focus()
+            else:
+                self.double_click_release = False # after double click we want bos bar to have focus
+                
+            if event.button == 1:
+                if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
+                    # remove from selected if already there
+                    try:
+                        index = self.selected_objects.index(media_object)
+                        self.selected_objects.remove(media_object)
+                        media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_bg_color())
+                    except:
+                        pass
+        """
 
     def select_media_file(self, media_file):
         self.clear_selection()
@@ -350,10 +384,10 @@ def write_out_eff_imgs():
 def write_image(profile, source_path, filter_info):
 
     # Create consumer
-    print "writing " + filter_info.mlt_service_id + "..."
+    #print "writing " + filter_info.mlt_service_id + "..."
     out_img_path = OUT_FOLDER + filter_info.mlt_service_id + ".png"
     out_img_path_stripped = out_img_path.replace(" ", "")
-    print out_img_path_stripped
+    #print out_img_path_stripped
     consumer = mlt.Consumer(profile, "avformat", str(out_img_path_stripped))
     consumer.set("real_time", 0)
     consumer.set("vcodec", "png")

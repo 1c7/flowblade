@@ -811,9 +811,9 @@ class EditorWindow:
         tline_left.pack_start(self.tline_box, True, True, 0)
 
         tline_pane = Gtk.HBox(False, 1)
-        tline_pane.pack_start(tline_left, True, True, 0)
         tline_pane.pack_start(effect_dnd_panel, False, False, 0)
-        
+        tline_pane.pack_start(tline_left, True, True, 0)
+
         self.tline_pane = tline_pane
     
         # VPaned top row / timeline

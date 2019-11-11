@@ -822,7 +822,6 @@ class EditorWindow:
         self.app_v_paned.pack2(tline_pane, resize=True, shrink=False)
         self.app_v_paned.no_dark_bg = True
 
-
         # Menu box
         # menubar size 348, 28 if w want to center someting her with set_size_request
         self.menubar.set_margin_bottom(4)

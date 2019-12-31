@@ -3,10 +3,11 @@
 1. [Installing deb package](./INSTALLING.md#installing-deb-package)
   1. [Installing Flatpak from Flathub](./INSTALLING.md#installing-flatpak-from-flathub)
   1. [Installing from your OS repository](./INSTALLING.md#installing-from-your-os-repository)
-  1. [Installing using Source Code Archive](./INSTALLING.md#installing-using-source-code-archive)
   1. [Installing using Development Repository Version](./INSTALLING.md#installing-using-development-repository-version)
   1. [Installing with setup.py not supported](./INSTALLING.md#installing-with-setuppy-not-supported)   
 ### Installing deb package
+
+**Latest release Flowblade 2.4 is NOT available as .deb package. Very few disributions have the required MLT 6.18 available. Using Flatpak for 2.4 is recommended. .deb packaging will return for 2.6**
 
 #### Step 1. Download and install .deb 
 **First download .deb file** for Flowblade 2.2 from <a href="https://github.com/jliljebl/flowblade/releases">here.</a>
@@ -29,14 +30,12 @@ See: https://packages.debian.org/search?keywords=flowblade and https://launchpad
 
 ### Installing Flatpak from Flathub
 
-**NOTE: Flatpak is currently still in version 2.0 , the issues are being worked on.**
-
 #### 1. Setup Flatpak and Flathub
 There is an official guide here: https://flatpak.org/setup/
 
 #### 2a. Install using Gnome SOFTWARE
 If your distribution has Gnome SOFTWARE application available you can install Flowblade with it.
-**NOTE: There can be two versions of Flowblade in  Gnome SOFTWARE, Flatpak version has text dl.flathub.org text**
+**NOTE: There can be two versions of Flowblade in Gnome SOFTWARE, Flatpak version has text dl.flathub.org text**
 
 #### 2b. Install from commandline
 Give these commands in terminal:
@@ -48,8 +47,6 @@ flatpak install --from https://flathub.org/repo/appstream/io.github.jliljebl.Flo
 ```bash
 flatpak run io.github.jliljebl.Flowblade
 ```
-**NOTE: Flatpak releases can sometimes be a bit lagging after other releases**
-
 
 ### Installing from your OS repository
 
@@ -72,22 +69,9 @@ _Git version_. Visit the <a href="https://aur.archlinux.org/packages/flowblade-g
 yaourt -S flowblade-git
 ```
 
-
-
-### Installing using Source Code Archive
-
-Flowblade is currently a 100% script application, and all the dependencies should be available in popular distributions, so in most cases it should be possible to install and run Flowblade without compiling anything.
-
-**First download tar.gz** source archive file from <a href="https://github.com/jliljebl/flowblade/releases">here.</a> 
-
-  * Extract archive into a folder of your choosing
-  * Install dependencies. See [Dependencies](DEPENDENCIES.md) doc for more information.
-  * If you have Flowblade installed in your system, you probably have the dependencies installed, unless some new ones have been added.
-  * Launch by running script *.../flowblade-2.0.0/flowblade* that was created in the folder where archive was unpacked.
-  * Note that if you have Flowblade installed yu will need use full path to repository version or navigate to the folder containing launch script and use command "./flowblade" to launch repository version instead of installed version.
-
-
 ### Installing using Development Repository Version
+
+Before MLT 6.18 comes available in distributions, Python 3 bindings have to be build and installed to run repository Flowblade. We have some pointers here: https://github.com/jliljebl/flowblade/blob/master/flowblade-trunk/docs/creating_user_folder_bindings.md 
 
 Flowblade is currently a 100% script application, and all the dependencies should be available in popular distributions, so in most cases it should be possible to install and run Flowblade without compiling anything.
 

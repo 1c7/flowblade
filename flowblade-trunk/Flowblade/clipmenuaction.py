@@ -111,7 +111,15 @@ def _compositor_menu_item_activated(widget, data):
     elif action_id == "set auto follow":
         compositor.obey_autofollow = widget.get_active()
         updater.repaint_tline()
-        
+
+def _delete_compositors(data):
+    clip, track, item_id, x = data
+    compositors = current_sequence().get_clip_compositors(clip)
+    for compositor in compositors:
+        data = {"compositor":compositor}
+        action = edit.delete_compositor_action(data)
+        action.do_edit()
+    
 def _open_clip_in_effects_editor(data):
     updater.open_clip_in_effects_editor(data)
     
@@ -218,15 +226,21 @@ def _add_compositor(data):
 
     target_track_index = track.id - 1
 
+    if current_sequence().compositing_mode == appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW:
+        target_track_index = current_sequence().first_video_index
+
     compositor_in = current_sequence().tracks[track.id].clip_start(clip_index)
     clip_length = clip.clip_out - clip.clip_in
     compositor_out = compositor_in + clip_length
 
+    a_track = target_track_index
+    b_track = track.id
+
     edit_data = {"origin_clip_id":clip.id,
                 "in_frame":compositor_in,
                 "out_frame":compositor_out,
-                "a_track":target_track_index,
-                "b_track":track.id,
+                "a_track":a_track,
+                "b_track":b_track,
                 "compositor_type":compositor_type,
                 "clip":clip}
     action = edit.add_compositor_action(edit_data)
@@ -675,4 +689,5 @@ POPUP_HANDLERS = {"set_master":syncsplitevent.init_select_master_clip,
                   "delete_clip_marker":_delete_clip_marker,
                   "deleteall_clip_markers":_delete_all_clip_markers,
                   "volumekf":_volume_keyframes,
-                  "brightnesskf":_brightness_keyframes}
+                  "brightnesskf":_brightness_keyframes,
+                  "delete_compositors":_delete_compositors}

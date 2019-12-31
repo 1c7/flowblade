@@ -45,6 +45,7 @@ import time
 import threading
 import unicodedata
 
+import atomicfile
 import appconsts
 import dialogutils
 import editorstate
@@ -445,8 +446,7 @@ class RenderQueue:
             render_item = None
             try:
                 data_file_path = data_files_dir + data_file_name
-                data_file = open(data_file_path, 'rb')
-                render_item = pickle.load(data_file)
+                render_item = utils.unpickle(data_file_path)
                 self.queue.append(render_item)
             except Exception as e:
                 print (str(e))
@@ -543,12 +543,14 @@ class BatchRenderItemData:
 
     def save(self):
         item_path = get_datafiles_dir() + self.generate_identifier() + ".renderitem"
-        item_write_file = open(item_path, "wb")
-        pickle.dump(self, item_write_file)
+        with atomicfile.AtomicFileWriter(item_path, "wb") as afw:
+            item_write_file = afw.get_file()
+            pickle.dump(self, item_write_file)
 
     def save_as_single_render_item(self, item_path):
-        item_write_file = open(item_path, "wb")
-        pickle.dump(self, item_write_file)
+        with atomicfile.AtomicFileWriter(item_path, "wb") as afw:
+            item_write_file = afw.get_file()
+            pickle.dump(self, item_write_file)
 
     def delete_from_queue(self):
         identifier = self.generate_identifier()
@@ -906,6 +908,7 @@ class RenderQueueView(Gtk.VBox):
         self.text_col_2.set_expand(False)
         self.text_col_2.pack_start(self.text_rend_2, True)
         self.text_col_2.add_attribute(self.text_rend_2, "text", 2)
+        self.text_col_2.set_min_width(90)
 
         self.text_col_3.set_expand(False)
         self.text_col_3.pack_start(self.text_rend_3, True)
@@ -1015,6 +1018,16 @@ def show_render_properties_panel(render_item):
     start_str = utils.get_tc_string_with_fps(start_frame, render_item.render_data.fps)
     end_str = utils.get_tc_string_with_fps(end_frame, render_item.render_data.fps)
     
+    
+    if hasattr(render_item.render_data, "proxy_mode"):
+        if render_item.render_data.proxy_mode == appconsts.USE_ORIGINAL_MEDIA:
+            proxy_mode = _("Using Original Media")
+        else:
+            proxy_mode = _("Using Proxy Media")
+    else:
+        proxy_mode = _("N/A")
+
+    
     LEFT_WIDTH = 200
     render_item.get_display_name()
     row0 = guiutils.get_two_column_box(guiutils.bold_label(_("Encoding:")), Gtk.Label(label=enc_desc), LEFT_WIDTH)
@@ -1026,6 +1039,7 @@ def show_render_properties_panel(render_item):
     row6 = guiutils.get_two_column_box(guiutils.bold_label(_("Frames Per Second:")), Gtk.Label(label=str(render_item.render_data.fps)), LEFT_WIDTH)
     row7 = guiutils.get_two_column_box(guiutils.bold_label(_("Render Profile Name:")), Gtk.Label(label=str(render_item.render_data.profile_name)), LEFT_WIDTH)
     row8 = guiutils.get_two_column_box(guiutils.bold_label(_("Render Profile:")), Gtk.Label(label=render_item.render_data.profile_desc), LEFT_WIDTH)
+    row8 = guiutils.get_two_column_box(guiutils.bold_label(_("Proxy Mode:")), Gtk.Label(label=proxy_mode), LEFT_WIDTH)
 
     vbox = Gtk.VBox(False, 2)
     vbox.pack_start(Gtk.Label(label=render_item.get_display_name()), False, False, 0)
@@ -1181,8 +1195,7 @@ class SingleRenderThread(threading.Thread):
 
         try:
             data_file_path = hidden_dir + CURRENT_RENDER_RENDER_ITEM
-            data_file = open(data_file_path, 'rb')
-            render_item = pickle.load(data_file)
+            render_item = utils.unpickle(data_file_path)
             self.error_status = None
         except Exception as e:
             if self.error_status == None:

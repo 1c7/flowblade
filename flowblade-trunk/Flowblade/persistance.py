@@ -195,16 +195,9 @@ def save_project(project, file_path, changed_profile_desc=None):
     remove_attrs(s_proj, PROJECT_REMOVE)
 
     # Write out file.
-    outfile = open(file_path,'wb')
-    pickle.dump(s_proj, outfile)
-    
-    """
-    with atomicfile.AtomicFileWriter(file_path, "w") as afw:
-        write_file = afw.get_file()
-        pickle_str =  pickle.dumps(s_proj)
-        print (pickle_str)
-        pickle.dump(pickle_str, write_file)
-    """
+    with atomicfile.AtomicFileWriter(file_path, "wb") as afw:
+        outfile = afw.get_file()
+        pickle.dump(s_proj, outfile)
 
 def get_p_sequence(sequence):
     """
@@ -396,9 +389,7 @@ def _save_changed_xml_file(s_media_file, new_profile):
 def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
     _show_msg("Unpickling")
 
-    # Load project object
-    f = open(file_path, "rb")
-    project = pickle.load(f)
+    project = utils.unpickle(file_path)
 
     # Relinker only operates on pickleable python data 
     if relinker_load:
@@ -431,6 +422,10 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
     seq_count = 1
     for seq in project.sequences:
         FIX_N_TO_3_SEQUENCE_COMPATIBILITY(seq)
+            
+        if not hasattr(seq, "compositing_mode"):
+            seq.compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
+
         _show_msg(_("Building sequence ") + str(seq_count))
         all_clips = {}
         sync_clips = []

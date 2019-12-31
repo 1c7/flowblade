@@ -26,6 +26,7 @@ import math
 import os
 
 import dialogutils
+import editorpersistance # Aug-2019- SvdB - BB
 import editorstate
 import gui
 import guiutils
@@ -65,7 +66,11 @@ def render_progress_dialog(callback, parent_window, frame_rates_match=True):
     passed_box.pack_start(Gtk.Label(), True, True, 0)
 
     if frame_rates_match == False:
-        warning_icon = Gtk.Image.new_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.MENU)
+        # Aug-2019 - SvdB - BB
+        if editorpersistance.prefs.double_track_hights:
+            warning_icon = Gtk.Image.new_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.DND)
+        else:
+            warning_icon = Gtk.Image.new_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.MENU)
         warning_text = Gtk.Label(label=_("Project and Render Profile FPS values are not same. Rendered file may have A/V sync issues."))
         warning_box = Gtk.HBox(False, 2)
         warning_box.pack_start(warning_icon,False, False, 0)
@@ -205,7 +210,7 @@ def show_slowmo_dialog(media_file, default_range_render, _response_callback):
     
     label = Gtk.Label(label=_("Speed %:"))
 
-    adjustment = Gtk.Adjustment(float(100), float(1), float(2900), float(1))
+    adjustment = Gtk.Adjustment(value=float(100), lower=float(1), upper=float(2900), step_incr=float(1))
     fb_widgets.adjustment = adjustment
 
     spin = Gtk.SpinButton()
@@ -351,7 +356,7 @@ def show_reverse_dialog(media_file, default_range_render, _response_callback):
     
     label = Gtk.Label(label=_("Speed %:"))
 
-    adjustment = Gtk.Adjustment(float(-100), float(-600), float(-1), float(1))
+    adjustment = Gtk.Adjustment(value=float(-100), lower=float(-600), upper=float(-1), step_incr=float(1))
     fb_widgets.hslider = Gtk.HScale()
     fb_widgets.hslider.set_adjustment(adjustment)
     fb_widgets.hslider.set_draw_value(False)
@@ -590,7 +595,11 @@ def get_render_panel_left(render_widgets):
     if small_height == False:
         render_panel.pack_start(encoding_panel, False, False, 0)
         render_panel.pack_start(Gtk.Label(), True, True, 0)
-        
+    elif editorstate.SCREEN_HEIGHT == 900: # 900px height screens need most small height fixes but not this
+        encoding_panel = guiutils.get_named_frame(_("Encoding Format"), render_widgets.encoding_panel.vbox, 4)
+        render_panel.pack_start(encoding_panel, False, False, 0)
+        render_panel.pack_start(Gtk.Label(), True, True, 0)
+    
     return render_panel
 
 def get_render_panel_right(render_widgets, render_clicked_cb, to_queue_clicked_cb):
@@ -759,7 +768,8 @@ class RenderEncodingPanel():
         
         self.sample_rate_selector = RenderAudioRateSelector()
 
-        self.speaker_image = Gtk.Image.new_from_file(respaths.IMAGE_PATH + "audio_desc_icon.png")
+        # Aug-2019 - SvdB - BB
+        self.speaker_image = guiutils.get_image("audio_desc_icon")
 
         quality_row  = Gtk.HBox()
         quality_row.pack_start(self.quality_selector.widget, False, False, 0)
@@ -793,13 +803,21 @@ class RenderArgsPanel():
         self.use_args_check.connect("toggled", self.use_args_toggled)
 
         self.opts_save_button = Gtk.Button()
-        icon = Gtk.Image.new_from_stock(Gtk.STOCK_SAVE, Gtk.IconSize.MENU)
+        # Aug-2019 - SvdB - BB
+        if editorpersistance.prefs.double_track_hights:
+            icon = Gtk.Image.new_from_stock(Gtk.STOCK_SAVE, Gtk.IconSize.LARGE_TOOLBAR)
+        else:
+            icon = Gtk.Image.new_from_stock(Gtk.STOCK_SAVE, Gtk.IconSize.MENU)
         self.opts_save_button.set_image(icon)
         self.opts_save_button.connect("clicked", lambda w: save_args_callback())
         self.opts_save_button.set_sensitive(False)
     
         self.opts_load_button = Gtk.Button()
-        icon = Gtk.Image.new_from_stock(Gtk.STOCK_OPEN, Gtk.IconSize.MENU)
+        # Aug-2019 - SvdB - BB
+        if editorpersistance.prefs.double_track_hights:
+            icon = Gtk.Image.new_from_stock(Gtk.STOCK_OPEN, Gtk.IconSize.LARGE_TOOLBAR)
+        else:
+            icon = Gtk.Image.new_from_stock(Gtk.STOCK_OPEN, Gtk.IconSize.MENU)
         self.opts_load_button.set_image(icon)
         self.opts_load_button.connect("clicked", lambda w: load_args_callback())
                 

@@ -30,6 +30,7 @@ from gi.repository import Gtk, Gdk
 
 import app
 import appconsts
+import atomicfile
 import dialogs
 import dialogutils
 import editorpersistance
@@ -628,8 +629,8 @@ def _get_proxy_dimensions(project_profile, proxy_size):
 
     old_width_half = int(project_profile.width() * size_mult)
     old_height_half = int(project_profile.height() * size_mult)
-    new_width = old_width_half - old_width_half % 8
-    new_height = old_height_half - old_height_half % 8
+    new_width = old_width_half - old_width_half % 2
+    new_height = old_height_half - old_height_half % 2
     return (new_width, new_height)
 
 def _get_proxy_profile(project):
@@ -648,10 +649,10 @@ def _get_proxy_profile(project):
     file_contents += "display_aspect_den=" + str(project_profile.display_aspect_den()) + "\n"
 
     proxy_profile_path = userfolders.get_cache_dir() + "temp_proxy_profile"
-    profile_file = open(proxy_profile_path, "w")
-    profile_file.write(file_contents)
-    profile_file.close()
-    
+    with atomicfile.AtomicFileWriter(proxy_profile_path, "w") as afw:
+        profile_file = afw.get_file()
+        profile_file.write(file_contents)
+
     proxy_profile = mlt.Profile(proxy_profile_path)
     return proxy_profile
 

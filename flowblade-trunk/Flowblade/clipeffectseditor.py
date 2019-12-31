@@ -33,6 +33,7 @@ import dialogs
 import dialogutils
 import edit
 import editorpersistance
+import editorstate
 from editorstate import PROJECT
 import gui
 import guicomponents
@@ -76,13 +77,7 @@ def get_clip_effects_editor_panel(group_combo_box, effects_list_view):
     label_row = guiutils.get_left_justified_box([stack_label])
     guiutils.set_margins(label_row, 0, 4, 0, 0)
     
-    ad_buttons_box = Gtk.HBox(True,1)
-    ad_buttons_box.pack_start(widgets.add_effect_b, True, True, 0)
-    ad_buttons_box.pack_start(widgets.del_effect_b, True, True, 0)
 
-    stack_buttons_box = Gtk.HBox(False,1)
-    stack_buttons_box.pack_start(ad_buttons_box, True, True, 0)
-    stack_buttons_box.pack_start(widgets.toggle_all, False, False, 0)
     
     effect_stack = widgets.effect_stack_view    
 
@@ -115,13 +110,48 @@ def get_clip_effects_editor_panel(group_combo_box, effects_list_view):
     group_name, filters_array = mltfilters.groups[0]
     effects_list_view.fill_data_model(filters_array)
     effects_list_view.treeview.get_selection().select_path("0")
-    
+
     effects_vbox = Gtk.VBox(False, 2)
-    effects_vbox.pack_start(label_row, False, False, 0)
-    effects_vbox.pack_start(stack_buttons_box, False, False, 0)
-    effects_vbox.pack_start(effect_stack, True, True, 0)
-    effects_vbox.pack_start(combo_row, False, False, 0)
-    effects_vbox.pack_start(effects_list_view, True, True, 0)
+    if editorstate.SCREEN_HEIGHT < 1023:
+
+        stack_buttons_box = Gtk.HBox(False,1)
+        stack_buttons_box.pack_start(widgets.del_effect_b, True, True, 0)
+        stack_buttons_box.pack_start(widgets.toggle_all, False, False, 0)
+        stack_buttons_box.pack_start(guiutils.pad_label(74, 10), False, False, 0)
+        guiutils.set_margins(stack_buttons_box, 4, 4, 0, 0)
+
+        stack_vbox = Gtk.VBox(False, 2)
+        stack_vbox.pack_start(stack_buttons_box, False, False, 0)
+        stack_vbox.pack_start(effect_stack, True, True, 0)
+
+        add_buttons_box = Gtk.HBox(True,1)
+        add_buttons_box.pack_start(widgets.add_effect_b, True, True, 0)
+        add_buttons_box.pack_start(Gtk.Label(), True, True, 0)
+        guiutils.set_margins(add_buttons_box, 4, 4, 0, 0)
+        
+        groups_vbox = Gtk.VBox(False, 2)
+        groups_vbox.pack_start(add_buttons_box, False, False, 0)
+        groups_vbox.pack_start(combo_row, False, False, 0)
+        groups_vbox.pack_start(effects_list_view, True, True, 0)
+
+        notebook = Gtk.Notebook()
+        notebook.append_page(stack_vbox, Gtk.Label(label=_("Stack")))
+        notebook.append_page(groups_vbox, Gtk.Label(label=_("Filters")))
+        effects_vbox.pack_start(notebook, True, True, 0)
+    else:
+        ad_buttons_box = Gtk.HBox(True,1)
+        ad_buttons_box.pack_start(widgets.add_effect_b, True, True, 0)
+        ad_buttons_box.pack_start(widgets.del_effect_b, True, True, 0)
+
+        stack_buttons_box = Gtk.HBox(False,1)
+        stack_buttons_box.pack_start(ad_buttons_box, True, True, 0)
+        stack_buttons_box.pack_start(widgets.toggle_all, False, False, 0)
+
+        effects_vbox.pack_start(label_row, False, False, 0)
+        effects_vbox.pack_start(stack_buttons_box, False, False, 0)
+        effects_vbox.pack_start(effect_stack, True, True, 0)
+        effects_vbox.pack_start(combo_row, False, False, 0)
+        effects_vbox.pack_start(effects_list_view, True, True, 0)
     
     widgets.group_combo.set_tooltip_text(_("Select Filter Group"))
     widgets.effect_list_view.set_tooltip_text(_("Current group Filters"))
@@ -133,11 +163,14 @@ def _group_selection_changed(group_combo, filters_list_view):
     filters_list_view.fill_data_model(filters_array)
     filters_list_view.treeview.get_selection().select_path("0")
 
-def set_clip(new_clip, new_track, new_index):
+def set_clip(new_clip, new_track, new_index, show_tab=True):
     """
     Sets clip being edited and inits gui.
     """
     global clip, track, clip_index
+    if clip == new_clip and track == new_track and clip_index == new_index and show_tab==False:
+        return
+
     clip = new_clip
     track = new_track
     clip_index = new_index
@@ -153,7 +186,8 @@ def set_clip(new_clip, new_track, new_index):
     else:
         effect_selection_changed()
 
-    gui.middle_notebook.set_current_page(filters_notebook_index) # 2 == index of clipeditor page in notebook
+    if show_tab:
+        gui.middle_notebook.set_current_page(filters_notebook_index) # 2 == index of clipeditor page in notebook
 
 def effect_select_row_double_clicked(treeview, tree_path, col):
     add_currently_selected_effect()
@@ -217,6 +251,9 @@ def create_widgets():
     """
     Widgets for editing clip effects properties.
     """
+    # Aug-2019 - SvdB - BB
+    prefs = editorpersistance.prefs
+
     widgets.clip_info = guicomponents.ClipInfoPanel()
     
     widgets.exit_button = Gtk.Button()
@@ -237,11 +274,11 @@ def create_widgets():
     widgets.value_edit_frame.add(widgets.value_edit_box)
 
     widgets.add_effect_b = Gtk.Button()
-    widgets.add_effect_b.set_image(Gtk.Image.new_from_file(respaths.IMAGE_PATH + "filter_add.png"))
+    widgets.add_effect_b.set_image(guiutils.get_image("filter_add"))
     widgets.del_effect_b = Gtk.Button()
-    widgets.del_effect_b.set_image(Gtk.Image.new_from_file(respaths.IMAGE_PATH + "filter_delete.png"))
+    widgets.del_effect_b.set_image(guiutils.get_image("filter_delete"))
     widgets.toggle_all = Gtk.Button()
-    widgets.toggle_all.set_image(Gtk.Image.new_from_file(respaths.IMAGE_PATH + "filters_all_toggle.png"))
+    widgets.toggle_all.set_image(guiutils.get_image("filters_all_toggle"))
 
     widgets.add_effect_b.connect("clicked", lambda w,e: add_effect_pressed(), None)
     widgets.del_effect_b.connect("clicked", lambda w,e: delete_effect_pressed(), None)
@@ -514,9 +551,11 @@ def effect_selection_changed(use_current_filter_index=False):
                 editor_type = ep.args[propertyeditorbuilder.EDITOR]
             except KeyError:
                 editor_type = propertyeditorbuilder.SLIDER # this is the default value
+            
             if ((editor_type == propertyeditorbuilder.KEYFRAME_EDITOR)
                 or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_RELEASE)
-                or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)):
+                or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)
+                or (editor_type == propertyeditorbuilder.FILTER_RECT_GEOM_EDITOR)):
                     keyframe_editor_widgets.append(editor_row)
             
             # if slider property is being dedited as keyrame property
@@ -657,8 +696,7 @@ def _save_effect_values_dialog_callback(dialog, response_id):
 def _load_effect_values_dialog_callback(dialog, response_id):
     if response_id == Gtk.ResponseType.ACCEPT:
         load_path = dialog.get_filenames()[0]
-        f = open(load_path)
-        effect_data = pickle.load(f)
+        effect_data = utils.unpickle(load_path)
         
         filter_object = clip.filters[current_filter_index]
         

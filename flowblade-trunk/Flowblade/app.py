@@ -25,13 +25,6 @@ Handles application initialization, shutdown, opening projects, autosave and cha
 sequences.
 """
 
-"""
-    Change History:
-        Aug-2019 - SvdB - AS:
-            Changes to get the autosave value from preferences to work.
-            See preferenceswindow.py for more info
-"""
-
 try:
     import pgi
     pgi.install_as_gi()
@@ -167,7 +160,7 @@ def main(root_path):
     except:
         editorstate.mlt_version = "0.0.99" # magic string for "not found"
 
-    # Create user folders if need and determine if were using xdg or dotfile userf folders.
+    # Create user folders if needed and determine if we're using xdg or dotfile userf folders.
     userfolders.init()
 
     # Set paths.
@@ -223,16 +216,8 @@ def main(root_path):
     # Load drag'n'drop images
     dnd.init()
 
-    # Adjust gui parameters for smaller screens
-    scr_w = Gdk.Screen.width()
-    scr_h = Gdk.Screen.height()
-    editorstate.SCREEN_WIDTH = scr_w
-    editorstate.SCREEN_HEIGHT = scr_h
-
-    print("Screen size:", scr_w, "x", scr_h)
-    print("Small height:", editorstate.screen_size_small_height())
-    print("Small width:",  editorstate.screen_size_small_width())
-
+    # Save screen size data and modify rendering based on screen size/s and number of monitors. 
+    scr_w, scr_h = _set_screen_size_data()
     _set_draw_params()
 
     # Refuse to run on too small screen.
@@ -542,6 +527,9 @@ def init_sequence_gui():
     Called after project load or changing current sequence 
     to initialize interface.
     """
+    # Set correct compositing mode menu item selected
+    gui.editor_window.init_compositing_mode_menu()
+
     # Set initial timeline scale draw params
     editorstate.current_sequence().update_length()
     updater.update_pix_per_frame_full_view()
@@ -610,7 +598,6 @@ def open_project(new_project):
 
     editorstate.project = new_project
     editorstate.media_view_filter = appconsts.SHOW_ALL_FILES
-    editorstate.auto_follow = editorstate.project.get_project_property(appconsts.P_PROP_AUTO_FOLLOW)
 
     # Inits widgets with project data
     init_project_gui()
@@ -685,6 +672,8 @@ def change_current_sequence(index):
     selected_index = editorstate.project.sequences.index(editorstate.current_sequence())
     selection.select_path(str(selected_index))
 
+    audiomonitoring.recreate_master_meter_filter_for_new_sequence()
+    
     start_autosave()
 
     updater.set_timeline_height()
@@ -836,7 +825,46 @@ def _xdg_copy_completed_callback(dialog):
     dialog.destroy()
     Gdk.threads_leave()
 
-# ------------------------------------------------------- small screens
+# ------------------------------------------------------- small and multiple screens
+# We need a bit more stuff because having multiple monitors can mix up setting draw parameters.
+def _set_screen_size_data():
+    monitor_data = utils.get_display_monitors_size_data()
+    monitor_data_index = editorpersistance.prefs.layout_display_index
+
+    display = Gdk.Display.get_default()
+    num_monitors = display.get_n_monitors() # Get number of monitors.
+    if monitor_data_index == 0:
+        scr_w = Gdk.Screen.width()
+        scr_h = Gdk.Screen.height()
+        print("Using Full Screen size for layout:", scr_w, "x", scr_h)
+    elif monitor_data_index > num_monitors:
+        print("Specified layout monitor not present.")
+        scr_w = Gdk.Screen.width()
+        scr_h = Gdk.Screen.height()
+        print("Using Full Screen size for layout:", scr_w, "x", scr_h)
+        editorpersistance.prefs.layout_display_index = 0
+    else:
+
+        scr_w, scr_h = monitor_data[monitor_data_index]
+        if scr_w < 1151 or scr_h < 767:
+            print("Selected layout monitor too small.")
+            scr_w = Gdk.Screen.width()
+            scr_h = Gdk.Screen.height()
+            print("Using Full Screen size for layout:", scr_w, "x", scr_h)
+            editorpersistance.prefs.layout_display_index = 0
+        else:
+            # Selected monitor data is available and monitor is usable as layout monitor.
+            print("Using monitor " + str(monitor_data_index) + " for layout: " + str(scr_w) + " x " + str(scr_h))
+    
+    editorstate.SCREEN_WIDTH = scr_w
+    editorstate.SCREEN_HEIGHT = scr_h
+    
+    print("Small height:", editorstate.screen_size_small_height())
+    print("Small width:",  editorstate.screen_size_small_width())
+
+    return (scr_w, scr_h)
+
+# Adjust gui parameters for smaller screens
 def _set_draw_params():
     if editorstate.screen_size_small_width() == True:
         appconsts.NOTEBOOK_WIDTH = 400

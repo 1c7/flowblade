@@ -387,14 +387,6 @@ def _parse_line(line_start, line_end, buf):
         return (None, _("Arg name token is empty."))
     if len(v) == 0:
         return (None, _("Arg value token is empty."))
-    try:
-        k.decode('ascii')
-    except UnicodeDecodeError:
-        return (None, _("Non-ascii char in Arg name."))
-    try:
-        v.decode('ascii')
-    except UnicodeDecodeError:
-        return (None, _("Non-ascii char in Arg value."))
     if k.find(" ") != -1:
         return (None,  _("Whitespace in Arg name."))
     if v.find(" ") != -1:
@@ -476,11 +468,12 @@ class FileRenderPlayer(threading.Thread):
 
 
 class XMLRenderPlayer(threading.Thread):
-    def __init__(self, file_name, callback, data):
+    def __init__(self, file_name, callback, data, rendered_sequence=None):
         self.file_name = file_name
         self.render_done_callback = callback
         self.data = data
         self.current_playback_frame = 0
+        self.rendered_sequence = rendered_sequence
 
         threading.Thread.__init__(self)
 
@@ -506,7 +499,10 @@ class XMLRenderPlayer(threading.Thread):
             time.sleep(0.1)
         
         # Get render producer
-        timeline_producer = PROJECT().c_seq.tractor
+        if self.rendered_sequence == None: # default is current sequence
+            timeline_producer = PROJECT().c_seq.tractor
+        else:
+            timeline_producer = self.rendered_sequence.tractor
 
         # Get render consumer
         xml_consumer = mlt.Consumer(PROJECT().profile, "xml", str(self.file_name))

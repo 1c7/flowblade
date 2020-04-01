@@ -46,6 +46,8 @@ SAVEFILE_VERSION = 5 # this is changed when backwards incompatible changes are i
 
 FALLBACK_THUMB = "fallback_thumb.png"
 
+PROXIES_DIR = "/proxies/"
+ 
 # Project events
 EVENT_CREATED_BY_NEW_DIALOG = 0
 EVENT_CREATED_BY_SAVING = 1
@@ -112,7 +114,6 @@ class Project:
         thumbnailer.set_context(self.profile)
 
     def add_image_sequence_media_object(self, resource_path, name, length, ttl):
-        print(resource_path)
         media_object = self.add_media_file(resource_path)
         media_object.length = length
         media_object.name = name
@@ -157,7 +158,10 @@ class Project:
 
     def add_pattern_producer_media_object(self, media_object):
         self._add_media_object(media_object)
-
+        
+    def add_container_clip_media_object(self, media_object):
+        self._add_media_object(media_object)
+        
     def _add_media_object(self, media_object, target_bin=None):
         """
         Adds media file or color clip to project data structures.
@@ -331,6 +335,8 @@ class MediaFile:
         
         self.current_frame = 0
 
+        self.container_data = None
+
         self.info = info
 
         # Set default length for graphics files
@@ -375,7 +381,7 @@ class MediaFile:
         if hasattr(self, "use_unique_proxy"): # This may have been added in proxyediting.py to prevent interfering with existing projects
             proxy_md_key = proxy_md_key + os.urandom(16)
         md_str = hashlib.md5(proxy_md_key.encode('utf-8')).hexdigest()
-        return str(userfolders.get_render_dir() + "/proxies/" + md_str + "/" + file_name)
+        return str(userfolders.get_render_dir() + "/"+ appconsts.PROXIES_DIR + md_str + "/" + file_name)
 
     def add_proxy_file(self, proxy_path):
         self.has_proxy_file = True

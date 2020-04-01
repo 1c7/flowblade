@@ -46,7 +46,7 @@ _columns = 3
 # ---------------------------------------------------------- interface
 def get_test_panel():
 
-    effects_list_view = guicomponents.FilterListView()
+    effects_list_view = guicomponents.FilterListView(None, (250, 200))
     group_combo_box = Gtk.ComboBoxText()
 
     for group in mltfilters.groups:

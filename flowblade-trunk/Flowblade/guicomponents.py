@@ -633,13 +633,16 @@ class FilterListView(ImageTextImageListView):
     """
     GUI component displaying list of available filters.
     """
-    def __init__(self, selection_cb=None):
+    def __init__(self, selection_cb=None, minimum_dimension=None):
         ImageTextImageListView.__init__(self)
 
         # Connect selection 'changed' signal
-        if not(selection_cb == None):
+        if selection_cb != None:
             tree_sel = self.treeview.get_selection()
             tree_sel.connect("changed", selection_cb)
+            
+        if minimum_dimension != None:
+            self.set_size_request(*minimum_dimension)
         
     def fill_data_model(self, filter_group):
         self.storemodel.clear()

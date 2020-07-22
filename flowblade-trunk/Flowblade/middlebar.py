@@ -39,6 +39,95 @@ import updater
 import undo
 import workflow
 
+
+# Middlebar buttons
+MB_BUTTON_ZOOM_IN = 0
+MB_BUTTON_ZOOM_OUT = 1
+MB_BUTTON_ZOOM_FIT = 2
+MB_BUTTON_UNDO = 3
+MB_BUTTON_REDO = 4
+MB_BUTTON_RENDERED_TRANSITION = 5
+MB_BUTTON_CUT = 6
+MB_BUTTON_RESYNC = 7
+MB_BUTTON_SPLIT = 8
+MB_BUTTON_SPLICE_OUT = 9
+MB_BUTTON_LIFT = 10
+MB_BUTTON_RIPPLE_DELETE = 11
+MB_BUTTON_RANGE_DELETE = 12
+MB_BUTTON_OVERWRITE_RANGE = 13
+MB_BUTTON_OVERWRITE_CLIP = 14
+MB_BUTTON_INSERT = 15
+MB_BUTTON_APPEND = 16
+MB_BUTTON_TOOL_MIXER = 17
+MB_BUTTON_TOOL_TITLER = 18
+MB_BUTTON_TOOL_BATCH = 19
+MB_BUTTON_TOOL_GMIC = 20
+
+# Button groups
+BUTTON_GROUP_TOOLS = 0
+BUTTON_GROUP_UNDO = 1
+BUTTON_GROUP_ZOOM = 2
+BUTTON_GROUP_EDIT = 3
+BUTTON_GROUP_SYNC_SPLIT = 4
+BUTTON_GROUP_DELETE = 5
+BUTTON_GROUP_MONITOR_ADD = 6
+
+# Button icons
+ICONS = {   MB_BUTTON_ZOOM_IN:"zoom_in",
+            MB_BUTTON_ZOOM_OUT:"zoom_out",
+            MB_BUTTON_ZOOM_FIT:"zoom_length",
+            MB_BUTTON_UNDO:"undo",
+            MB_BUTTON_REDO:"redo",
+            MB_BUTTON_RENDERED_TRANSITION:"dissolve",
+            MB_BUTTON_CUT:"cut",
+            MB_BUTTON_RESYNC:"resync",
+            MB_BUTTON_SPLIT:"split_audio",
+            MB_BUTTON_SPLICE_OUT:"splice_out",
+            MB_BUTTON_LIFT:"lift",
+            MB_BUTTON_RIPPLE_DELETE:"ripple_delete",
+            MB_BUTTON_RANGE_DELETE:"delete_range",
+            MB_BUTTON_OVERWRITE_RANGE:"overwrite_range",
+            MB_BUTTON_OVERWRITE_CLIP:"overwrite_clip",
+            MB_BUTTON_INSERT:"insert_clip",
+            MB_BUTTON_APPEND:"append_clip",
+            MB_BUTTON_TOOL_MIXER:"open_mixer",
+            MB_BUTTON_TOOL_TITLER:"open_titler",
+            MB_BUTTON_TOOL_BATCH:"open_renderqueue",
+            MB_BUTTON_TOOL_GMIC:"open_gmic"}
+
+
+# Default active values for buttons
+DEFAULT_ACTIVE_STATES = {   MB_BUTTON_ZOOM_IN:True,
+                            MB_BUTTON_ZOOM_OUT:True,
+                            MB_BUTTON_ZOOM_FIT:True,
+                            MB_BUTTON_UNDO:True,
+                            MB_BUTTON_REDO:True,
+                            MB_BUTTON_RENDERED_TRANSITION:True,
+                            MB_BUTTON_CUT:True,
+                            MB_BUTTON_RESYNC:True,
+                            MB_BUTTON_SPLIT:True,
+                            MB_BUTTON_SPLICE_OUT:True,
+                            MB_BUTTON_LIFT:True,
+                            MB_BUTTON_RIPPLE_DELETE:True,
+                            MB_BUTTON_RANGE_DELETE:True,
+                            MB_BUTTON_OVERWRITE_RANGE:True,
+                            MB_BUTTON_OVERWRITE_CLIP:True,
+                            MB_BUTTON_INSERT:True,
+                            MB_BUTTON_APPEND:True,
+                            MB_BUTTON_TOOL_MIXER:True,
+                            MB_BUTTON_TOOL_TITLER:True,
+                            MB_BUTTON_TOOL_BATCH:True,
+                            MB_BUTTON_TOOL_GMIC:True}
+
+# Button anf button group names
+NAMES = None # This has to be filled after initial import cascade.
+GROUP_NAMES = None
+
+# glassbuttons.GlassButtonsGroup objects used to show buttons.
+# Updated after button prefs changed.
+GLASS_BUTTON_GROUPS = {}
+
+
 # editorwindow.EditorWindow object.
 # This needs to be set here because gui.py module ref is not available at init time
 w = None
@@ -51,6 +140,56 @@ BUTTON_HEIGHT = 28 # middle edit buttons row
 BUTTON_WIDTH = 48 # middle edit buttons row
 
 NORMAL_WIDTH = 1420
+
+
+def _init_names():
+    global NAMES, GROUP_NAMES 
+
+    if NAMES != None:
+        return
+    
+    NAMES = {   MB_BUTTON_ZOOM_IN:_("Zoom In"),
+                MB_BUTTON_ZOOM_OUT:_("Zoom Out"),
+                MB_BUTTON_ZOOM_FIT:_("Zoom Length"),
+                MB_BUTTON_UNDO:_("Undo"),
+                MB_BUTTON_REDO:_("Redo"),
+                MB_BUTTON_RENDERED_TRANSITION:_("Add Rendered Transition/Fade"),
+                MB_BUTTON_CUT:_("Cut Active Tracks"),
+                MB_BUTTON_RESYNC:_("Resync Selected"),
+                MB_BUTTON_SPLIT:_("Split Audio"),
+                MB_BUTTON_SPLICE_OUT:_("Splice Out"),
+                MB_BUTTON_LIFT: _("Lift"),
+                MB_BUTTON_RIPPLE_DELETE:_("Ripple Delete"),
+                MB_BUTTON_RANGE_DELETE:_("Range Delete"),
+                MB_BUTTON_OVERWRITE_RANGE:_("Overwrite Range"),
+                MB_BUTTON_OVERWRITE_CLIP:_("Overwrite Clip"),
+                MB_BUTTON_INSERT:_("Insert Clip"),
+                MB_BUTTON_APPEND:_("Append Clip"),
+                MB_BUTTON_TOOL_MIXER:_("Audio Mixer"),
+                MB_BUTTON_TOOL_TITLER:_("Titler"),
+                MB_BUTTON_TOOL_BATCH:_("Batch Render Queue"),
+                MB_BUTTON_TOOL_GMIC:_("G'Mic Effects") }
+
+    GROUP_NAMES = { BUTTON_GROUP_TOOLS:_("Tools Group"),
+                    BUTTON_GROUP_UNDO:_("Undo Group"),
+                    BUTTON_GROUP_ZOOM:_("Zoom Group"),
+                    BUTTON_GROUP_EDIT:_("Edit Group"),
+                    BUTTON_GROUP_SYNC_SPLIT:_("Sync Split Group"),
+                    BUTTON_GROUP_DELETE:_("Delete Group"),
+                    BUTTON_GROUP_MONITOR_ADD:_("Monitor Add Group") }
+    """
+    tooltips = [_("Undo - Ctrl + Z"), _("Redo - Ctrl + Y")]
+    tooltips = [_("Audio Mixer"), _("Titler"), _("G'Mic Effects"), _("Batch Render Queue")]
+
+    tooltips = [_("Zoom In - Mouse Middle Scroll"), _("Zoom Out - Mouse Middle Scroll"), _("Zoom Length - Mouse Middle Click")]
+
+    tooltips = [_("Resync Selected"), _("Split Audio")]
+
+    tooltips = [_("Add Rendered Transition - 2 clips selected\nAdd Rendered Fade - 1 clip selected"), _("Cut Active Tracks - X\nCut All Tracks - Shift + X")]
+
+    tooltips = [_("Overwrite Range"), _("Overwrite Clip - T"), _("Insert Clip - Y"), _("Append Clip - U")]
+    tooltips = [_("Splice Out - Delete"), _("Lift - Control + Delete"), _("Ripple Delete"), _("Range Delete")]
+    """
 
 def _show_buttons_TC_LEFT_layout(widget):
     global w
@@ -106,6 +245,9 @@ def create_edit_buttons_row_buttons(editor_window, modes_pixbufs):
     _create_buttons(editor_window)
 
 def _create_buttons(editor_window):
+
+    _init_names()
+
     # Aug-2019 - SvdB - BB
     prefs = editorpersistance.prefs
     size_adj = 1
@@ -172,11 +314,13 @@ def _create_buttons(editor_window):
     tooltip_runner = glassbuttons.TooltipRunner(editor_window.monitor_insert_buttons, tooltips)
     editor_window.monitor_insert_buttons.no_decorations = no_decorations
     
+    # Undo group
     editor_window.undo_redo = glassbuttons.GlassButtonsGroup(28*size_adj, 23*size_adj, 2*size_adj, 2*size_adj, 7*size_adj)
-    editor_window.undo_redo.add_button(guiutils.get_cairo_image("undo"), undo.do_undo_and_repaint)
-    editor_window.undo_redo.add_button(guiutils.get_cairo_image("redo"), undo.do_redo_and_repaint)
-    tooltips = [_("Undo - Ctrl + Z"), _("Redo - Ctrl + Y")]
-    tooltip_runner = glassbuttons.TooltipRunner(editor_window.undo_redo, tooltips)
+    tooltips = []
+    _add_active_button(editor_window.undo_redo, MB_BUTTON_UNDO, tooltips, undo.do_undo_and_repaint)
+    _add_active_button(editor_window.undo_redo, MB_BUTTON_REDO, tooltips, undo.do_redo_and_repaint)
+    if editor_window.undo_redo.num_buttons() > 0:
+        tooltip_runner = glassbuttons.TooltipRunner(editor_window.undo_redo, tooltips)
     editor_window.undo_redo.no_decorations = no_decorations
     
     editor_window.tools_buttons = glassbuttons.GlassButtonsGroup(30*size_adj, 23*size_adj, 2*size_adj, 14*size_adj, 7*size_adj)
@@ -192,6 +336,14 @@ def _create_buttons(editor_window):
         editor_window.tools_buttons.sensitive[0] = False
         editor_window.tools_buttons.widget.set_tooltip_text(_("Audio Mixer(not available)\nTitler"))
 
+def _add_active_button(group, button, tooltips, callback):
+    active_states = DEFAULT_ACTIVE_STATES
+    if active_states[button] == False:
+        return
+    
+    group.add_button(guiutils.get_cairo_image(ICONS[button]), callback)
+    tooltips.append(NAMES[button])
+    
 def fill_with_TC_LEFT_pattern(buttons_row, window):
     buttons_row.set_homogeneous(False)
     global w

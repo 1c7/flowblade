@@ -267,6 +267,9 @@ class AbstractGlassButtons:
                 cr.stroke()
             x += self.button_width
 
+    def num_buttons(self):
+        return len(self.icons)
+
 
 class PlayerButtons(AbstractGlassButtons):
 

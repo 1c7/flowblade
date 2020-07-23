@@ -1009,6 +1009,10 @@ class EditorWindow:
         windows_menu_item.set_submenu(windows_menu)
         menu.append(windows_menu_item)
 
+        mb_buttons_item = Gtk.MenuItem(_("Middlebar Buttons..."))
+        mb_buttons_item.connect("activate", lambda w: middlebar.show_button_preferences_dialog())
+        menu.append(mb_buttons_item)
+
         mb_menu_item = Gtk.MenuItem(_("Middlebar Layout"))
         mb_menu = Gtk.Menu()
         tc_left = Gtk.RadioMenuItem()
@@ -1057,8 +1061,8 @@ class EditorWindow:
         sep = Gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        sep = Gtk.SeparatorMenuItem()
-        menu.append(sep)
+        #sep = Gtk.SeparatorMenuItem()
+        #menu.append(sep)
 
         interp_menu_item = Gtk.MenuItem(_("Monitor Playback Interpolation"))
         interp_menu = Gtk.Menu()

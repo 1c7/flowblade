@@ -149,10 +149,6 @@ def get_bg_color():
 def get_selected_bg_color():
     return _selected_bg_color
 
-# returns Gdk.RGBA color
-#def get_buttons_color():
-#    return _button_colors
-
 def set_theme_colors():
     # Find out if theme color discovery works and set selected bg color apppropiately when
     # this is first called.

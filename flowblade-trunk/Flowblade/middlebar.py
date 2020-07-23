@@ -20,11 +20,12 @@
 
 import cairo
 
-from gi.repository import Gtk
+from gi.repository import Gtk, GObject
 
 import appconsts
 import audiomonitoring
 import batchrendering
+import dialogutils
 import editorpersistance
 import editorstate
 import glassbuttons
@@ -499,3 +500,77 @@ def _clear_container(cont):
     children = cont.get_children()
     for child in children:
         cont.remove(child)
+
+
+# ----------------------------------------------------------------------- buttons prefs GUI
+def show_button_preferences_dialog():
+
+
+    dialog = Gtk.Dialog(_("Middle Button Preferences"), None,
+                    Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                    (_("Cancel"), Gtk.ResponseType.REJECT,
+                    _("OK"), Gtk.ResponseType.ACCEPT))
+
+    prefs_panel = _get_prefs_panel()
+    
+    dialog.connect('response', _buttons_preferences_dialog_callback, DEFAULT_ACTIVE_STATES)
+    dialog.vbox.pack_start(prefs_panel, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    dialogutils.default_behaviour(dialog)
+    dialog.set_transient_for(gui.editor_window.window)
+    dialog.show_all()
+
+
+def _buttons_preferences_dialog_callback(dialog, response_id, orig_prefs):
+    if response_id == Gtk.ResponseType.ACCEPT:
+        editorpersistance.update_prefs_from_widgets(all_widgets)
+        editorpersistance.save()
+        dialog.destroy()
+    else:
+        # orig_prefs
+        dialog.destroy()
+
+def _get_prefs_panel():
+    pane = Gtk.VBox()
+    buttons = [MB_BUTTON_ZOOM_IN, MB_BUTTON_ZOOM_OUT, MB_BUTTON_ZOOM_FIT]
+    zoom_panel = ButtonGroupPanel(buttons, DEFAULT_ACTIVE_STATES)
+
+    pane.pack_start(zoom_panel, False, False, 0)
+    
+    return pane
+
+
+class ButtonGroupPanel(Gtk.VBox):
+    def __init__(self, buttons, active_states):
+        GObject.GObject.__init__(self)
+
+        for button in buttons:
+            row = ButtonPrefRow(button, active_states)
+            self.pack_start(row, False, False, 0)
+
+
+
+class ButtonPrefRow(Gtk.HBox):
+    def __init__(self, button, active_states):
+        GObject.GObject.__init__(self)
+
+        self.button = button
+        self.active_states = active_states
+    
+        name = NAMES[button]
+        label = Gtk.Label(name)
+        label_box = guiutils.get_left_justified_box([label])
+        icon = guiutils.get_image(ICONS[button])
+        icon_box = guiutils.get_left_justified_box([icon])
+        active = active_states[button]
+        active_check = Gtk.CheckButton()
+        active_check.set_active(active)
+        
+        label_box.set_size_request(260, 24)
+        icon_box.set_size_request(96, 24)
+        active_check.set_size_request(24, 24)
+
+        self.pack_start(icon_box, False, False, 0)
+        self.pack_start(label_box, False, False, 0)
+        self.pack_start(active_check, False, False, 0)
+

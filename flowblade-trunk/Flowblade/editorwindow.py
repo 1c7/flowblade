@@ -1009,7 +1009,7 @@ class EditorWindow:
         windows_menu_item.set_submenu(windows_menu)
         menu.append(windows_menu_item)
 
-        mb_buttons_item = Gtk.MenuItem(_("Middlebar Buttons..."))
+        mb_buttons_item = Gtk.MenuItem(_("Set Active Middlebar Buttons..."))
         mb_buttons_item.connect("activate", lambda w: middlebar.show_button_preferences_dialog())
         menu.append(mb_buttons_item)
 

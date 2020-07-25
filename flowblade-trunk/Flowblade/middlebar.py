@@ -506,7 +506,7 @@ def _clear_container(cont):
 def show_button_preferences_dialog():
 
 
-    dialog = Gtk.Dialog(_("Middle Button Preferences"), None,
+    dialog = Gtk.Dialog(_("Set Active Middlebar Buttons"), None,
                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
                     (_("Cancel"), Gtk.ResponseType.REJECT,
                     _("OK"), Gtk.ResponseType.ACCEPT))
@@ -531,23 +531,60 @@ def _buttons_preferences_dialog_callback(dialog, response_id, orig_prefs):
         dialog.destroy()
 
 def _get_prefs_panel():
-    pane = Gtk.VBox()
-    buttons = [MB_BUTTON_ZOOM_IN, MB_BUTTON_ZOOM_OUT, MB_BUTTON_ZOOM_FIT]
-    zoom_panel = ButtonGroupPanel(buttons, DEFAULT_ACTIVE_STATES)
-
-    pane.pack_start(zoom_panel, False, False, 0)
+    column_1 = Gtk.VBox()
     
-    return pane
+    buttons = [MB_BUTTON_ZOOM_IN, MB_BUTTON_ZOOM_OUT, MB_BUTTON_ZOOM_FIT]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_ZOOM], buttons, DEFAULT_ACTIVE_STATES)
+    column_1.pack_start(group_panel.widget, False, False, 0)
+
+    buttons = [MB_BUTTON_UNDO, MB_BUTTON_REDO]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_UNDO], buttons, DEFAULT_ACTIVE_STATES)
+    column_1.pack_start(group_panel.widget, False, False, 0)
+
+    buttons = [MB_BUTTON_RENDERED_TRANSITION, MB_BUTTON_CUT]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_EDIT], buttons, DEFAULT_ACTIVE_STATES)
+    column_1.pack_start(group_panel.widget, False, False, 0)
+
+    buttons = [MB_BUTTON_RESYNC, MB_BUTTON_SPLIT]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_SYNC_SPLIT], buttons, DEFAULT_ACTIVE_STATES)
+    column_1.pack_start(group_panel.widget, False, False, 0)
+
+    buttons = [MB_BUTTON_RESYNC, MB_BUTTON_SPLIT]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_SYNC_SPLIT], buttons, DEFAULT_ACTIVE_STATES)
+    column_1.pack_start(group_panel.widget, False, False, 0)
 
 
-class ButtonGroupPanel(Gtk.VBox):
-    def __init__(self, buttons, active_states):
-        GObject.GObject.__init__(self)
+    column_2 = Gtk.VBox()
+    
+    buttons = [MB_BUTTON_SPLICE_OUT, MB_BUTTON_LIFT, MB_BUTTON_RIPPLE_DELETE, MB_BUTTON_RANGE_DELETE]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_DELETE], buttons, DEFAULT_ACTIVE_STATES)
+    column_2.pack_start(group_panel.widget, False, False, 0)
 
+    buttons = [MB_BUTTON_OVERWRITE_RANGE, MB_BUTTON_OVERWRITE_CLIP, MB_BUTTON_INSERT, MB_BUTTON_APPEND]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_MONITOR_ADD], buttons, DEFAULT_ACTIVE_STATES)
+    column_2.pack_start(group_panel.widget, False, False, 0) 
+
+    buttons = [MB_BUTTON_TOOL_MIXER, MB_BUTTON_TOOL_TITLER, MB_BUTTON_TOOL_BATCH, MB_BUTTON_TOOL_GMIC]
+    group_panel = ButtonGroupPanel(GROUP_NAMES[BUTTON_GROUP_TOOLS], buttons, DEFAULT_ACTIVE_STATES)
+    column_2.pack_start(group_panel.widget, False, False, 0) 
+    
+    pane = Gtk.HBox()
+    pane.pack_start(column_1, False, False, 0)
+    pane.pack_start(guiutils.pad_label(24,12), False, False, 0)
+    pane.pack_start(column_2, False, False, 0)
+    
+    return dialogutils.get_alignment2(pane)
+
+
+class ButtonGroupPanel:
+    def __init__(self, button_group_name, buttons, active_states):
+        vbox = Gtk.VBox(True, 0)
+        
         for button in buttons:
             row = ButtonPrefRow(button, active_states)
-            self.pack_start(row, False, False, 0)
+            vbox.pack_start(row, False, False, 0)
 
+        self.widget = guiutils.get_named_frame(button_group_name, vbox)
 
 
 class ButtonPrefRow(Gtk.HBox):

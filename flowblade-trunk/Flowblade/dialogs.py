@@ -1635,8 +1635,6 @@ def watermark_dialog(add_callback, remove_callback):
     vbox.pack_start(row3, False, False, 0)
 
     alignment = dialogutils.get_default_alignment(vbox)
-    #alignment.set_padding(12, 12, 12, 12)
-    #alignment.add(vbox)
 
     dialog.vbox.pack_start(alignment, True, True, 0)
     dialogutils.set_outer_margins(dialog.vbox)

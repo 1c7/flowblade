@@ -42,6 +42,7 @@ import dialogutils
 import diskcachemanagement
 import dnd
 import editevent
+import editorlayout
 import editorpersistance
 import editorstate
 import exporting
@@ -987,6 +988,12 @@ class EditorWindow:
         # Full Screen -tem is already in menu, we need separator here
         sep = Gtk.SeparatorMenuItem()
         menu.append(sep)
+
+
+        lay_conf_item = Gtk.MenuItem.new_with_label(_("Editor Window Layout..."))
+        lay_conf_item.connect("activate", lambda a: editorlayout.show_configuration_dialog())
+        lay_conf_item.show()
+        menu.append(lay_conf_item)
 
         windows_menu_item = Gtk.MenuItem(_("Window Mode"))
         windows_menu =  Gtk.Menu()

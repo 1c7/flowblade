@@ -36,13 +36,13 @@ import translations
 
 TWO_COLUMN_BOX_HEIGHT = 20
 
-def bold_label(str):
-    label = Gtk.Label(label=bold_text(str))
+def bold_label(label_str):
+    label = Gtk.Label(label=bold_text(label_str))
     label.set_use_markup(True)
     return label
 
-def bold_text(str):
-    return "<b>" + str + "</b>"
+def bold_text(label_str):
+    return "<b>" + label_str + "</b>"
 
 def get_left_justified_box(widgets):
     hbox = Gtk.HBox()

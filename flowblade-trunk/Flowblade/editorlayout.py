@@ -28,6 +28,7 @@ import respaths
 
 SELECTED_BG = (0.1, 0.31, 0.58,1.0)
 
+# Edit panels.
 PANEL_MEDIA = 0
 PANEL_FILTERS = 1
 PANEL_COMPOSITORS = 2
@@ -38,13 +39,19 @@ PANEL_PROJECT = 6
 PANEL_PROJECT_SMALL_SCREEN = 7
 PANEL_MEDIA_AND_BINS_SMALL_SCREEN = 8
 
+# Layout containers where panels go as user decides.
 CONTAINER_T1 = 0
 CONTAINER_T2 = 1
 CONTAINER_B1 = 2
+CONTAINER_L1 = 3
+CONTAINER_L2 = 4
 
-TOP_ROW = 0
-BOTTOM_ROW = 1
+# Window layouts.
+DEFAULT_TWO_ROW = 0
+LEFT_COLUMN_TWO_TOP_W1 = 1
+LEFT_COLUMN_MONITOR_ONLY_W1 = 2
 
+# Row layouts.
 TOP_ROW_LAYOUT_DEFAULT_THREE = 0
 TOP_ROW_LAYOUT_MONITOR_CENTER_THREE = 1
 TOP_ROW_LAYOUT_TWO_ONLY = 2
@@ -52,25 +59,48 @@ BOTTOM_ROW_LAYOUT_TLINE_ONLY = 3
 BOTTOM_ROW_LAYOUT_PANEL_LEFT = 4
 BOTTOM_ROW_LAYOUT_PANEL_RIGHT = 5
 
+# Selection GUI
+WINDOW_LAYOUT_SELECTION = 0
+TOP_ROW_SELECTION = 1
+BOTTOM_ROW_ROW_SELECTION = 2
+
 LAYOUT_IMAGES = {   TOP_ROW_LAYOUT_DEFAULT_THREE:"layout_t_default",
                     TOP_ROW_LAYOUT_MONITOR_CENTER_THREE:"layout_t_monitor_center",
                     TOP_ROW_LAYOUT_TWO_ONLY:"layout_t_two_only",
                     BOTTOM_ROW_LAYOUT_TLINE_ONLY:"layout_b_tline_only",
                     BOTTOM_ROW_LAYOUT_PANEL_LEFT:"layout_b_panel_left",
-                    BOTTOM_ROW_LAYOUT_PANEL_RIGHT:"layout_b_panel_right"}
+                    BOTTOM_ROW_LAYOUT_PANEL_RIGHT:"layout_b_panel_right",
+                    LEFT_COLUMN_TWO_TOP_W1:"layout_l_w1_two_top",
+                    LEFT_COLUMN_MONITOR_ONLY_W1:"layout_l_w1_monitor_only"}
 
 LAYOUT_ITEM_WIDTH = 150
 LAYOUT_ITEM_HEIGHT = 100
 
 # These are set on dialog launch when trnaslations quaranteed to be initialized.
 PANELS_DATA = None
-CONTAINERS_NAMES = {CONTAINER_T1: "T1",
-                    CONTAINER_T2: "T2",
-                    CONTAINER_B1: "B1" }
+CONTAINERS_NAMES = None
+LAYOUT_NAMES = None
 
+# Single and two window modes and different screen sizes have different selection of layouts available.
+# Available layouts are determined at dialog launch.
+_available_layouts = None
+
+
+# --------------------------------------------------------------- LAYOUT SAVED DATA
+class WindowLayoutData:
+    def __init__(self):
+        self.window_layout = DEFAULT_TWO_ROW
+        
+        self.top_row_layout = TOP_ROW_LAYOUT_DEFAULT_THREE
+        self.bottom_row_layout = BOTTOM_ROW_LAYOUT_TLINE_ONLY
+        
+        self.panels_containers = {}
+
+        
 # --------------------------------------------------------------- DIALOG GUI
 def show_configuration_dialog():
-    global PANELS_DATA
+    global PANELS_DATA, CONTAINERS_NAMES, LAYOUT_NAMES
+    
     PANELS_DATA = { PANEL_MEDIA: (True, _("Media Panel")),
                     PANEL_FILTERS: (True,_("Filters Panel")),
                     PANEL_COMPOSITORS: (True,_("Compositors Panel")),
@@ -80,7 +110,18 @@ def show_configuration_dialog():
                     PANEL_PROJECT: (True, _("Project Panel")),
                     PANEL_PROJECT_SMALL_SCREEN: (True, _("Project Panel Small Screen")),
                     PANEL_MEDIA_AND_BINS_SMALL_SCREEN: (True, _("Media and Binss Panel Small Screen")) }
-    
+
+    CONTAINERS_NAMES = {CONTAINER_T1: _("Top Row 1"),
+                        CONTAINER_T2: _("Top Row 2"),
+                        CONTAINER_B1: _("Bottom Row 1")}
+
+    LAYOUT_NAMES = {DEFAULT_TWO_ROW: _("Default Two Row"),
+                    LEFT_COLUMN_TWO_TOP_W1: _("Left Column With Two Panel Top Row "),
+                    LEFT_COLUMN_MONITOR_ONLY_W1: _("Left Column With Monitor Only Top Row")}
+
+    global _available_layouts
+    _available_layouts = [DEFAULT_TWO_ROW, LEFT_COLUMN_TWO_TOP_W1, LEFT_COLUMN_MONITOR_ONLY_W1]
+
     dialog = Gtk.Dialog(_("Editor Preferences"), None,
                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
                     (_("Cancel"), Gtk.ResponseType.REJECT,
@@ -107,43 +148,48 @@ def _configuration_dialog_callback(dialog, response_id):
 
 
 def _get_edit_panel():
+    layout_select_combo = Gtk.ComboBoxText()
+    for layout in _available_layouts:
+        layout_select_combo.append_text(LAYOUT_NAMES[layout])
+    layout_select_combo.set_active(0)
     
-    top_row = LayoutSelectRow(TOP_ROW, selection_changed_callback)
-    top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_DEFAULT_THREE))
-    top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_MONITOR_CENTER_THREE))
-    top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_TWO_ONLY))
+    layout_selection_stack = Gtk.Stack.new()
+    
+    if DEFAULT_TWO_ROW in _available_layouts:
+        top_row = LayoutSelectRow(TOP_ROW_SELECTION, selection_changed_callback)
+        top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_DEFAULT_THREE))
+        top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_MONITOR_CENTER_THREE))
+        top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_TWO_ONLY))
 
-    bottom_row = LayoutSelectRow(TOP_ROW, selection_changed_callback)
-    bottom_row.add_selection_item(LayoutSelectItem(BOTTOM_ROW_LAYOUT_TLINE_ONLY))
-    bottom_row.add_selection_item(LayoutSelectItem(BOTTOM_ROW_LAYOUT_PANEL_LEFT))
-    bottom_row.add_selection_item(LayoutSelectItem(BOTTOM_ROW_LAYOUT_PANEL_RIGHT))
+        bottom_row = LayoutSelectRow(BOTTOM_ROW_ROW_SELECTION, selection_changed_callback)
+        bottom_row.add_selection_item(LayoutSelectItem(BOTTOM_ROW_LAYOUT_TLINE_ONLY))
+        bottom_row.add_selection_item(LayoutSelectItem(BOTTOM_ROW_LAYOUT_PANEL_LEFT))
+        bottom_row.add_selection_item(LayoutSelectItem(BOTTOM_ROW_LAYOUT_PANEL_RIGHT))
+    
+        stack_panel = Gtk.VBox(False, 2)
 
-    layout_data = LayoutData()
-    layout_data.available_containers.append(CONTAINER_T1)
-    layout_data.available_containers.append(CONTAINER_B1)
+        stack_panel.pack_start(guiutils.bold_label(_("Top Row Layout")), False, False, 0)
+        stack_panel.pack_start(top_row.widget, False, False, 0)
+        stack_panel.pack_start(guiutils.bold_label(_("Bottom Row Layout")), False, False, 0)
+        stack_panel.pack_start(bottom_row.widget, False, False, 0)
+
+        layout_selection_stack.add_named(stack_panel, str(DEFAULT_TWO_ROW))
+
+    layout_selection_stack.set_visible_child_name(str(DEFAULT_TWO_ROW))
+
+    available_containers = [CONTAINER_T1, CONTAINER_T2, CONTAINER_B1]
 
     container_select_panel = Gtk.VBox(False, 2)
     for panel in PANELS_DATA:
-        select_row = PanelContainerSelect(panel, layout_data)
+        select_row = PanelContainerSelect(panel, available_containers)
         container_select_panel.pack_start(select_row.widget, False, False, 0)
         
     pane = Gtk.VBox(False, 2)
-    pane.pack_start(guiutils.bold_label(_("Top Row Layout")), False, False, 0)
-    pane.pack_start(top_row.widget, False, False, 0)
-    pane.pack_start(guiutils.bold_label(_("Bottom Row Layout")), False, False, 0)
-    pane.pack_start(bottom_row.widget, False, False, 0)
+    pane.pack_start(layout_select_combo, False, False, 0)
+    pane.pack_start(layout_selection_stack, False, False, 0)
     pane.pack_start(container_select_panel, False, False, 0)
 
     return pane
-
-
-
-class LayoutData:
-    def __init__(self):
-        self.available_containers = []
-
-    def get_available_containers(self):
-        return self.available_containers
 
 
 class LayoutSelectRow:
@@ -208,7 +254,7 @@ class LayoutSelectItem:
 
 class PanelContainerSelect:
     
-    def __init__(self, panel, layout_data):
+    def __init__(self, panel, available_containers):
         self.panel = panel
         
         always_visible, name = PANELS_DATA[panel]
@@ -218,8 +264,6 @@ class PanelContainerSelect:
         if always_visible == False:
             container_select_combo.append_text(_("Not shown"))
             selection_values.append(None)
-        
-        available_containers = layout_data.get_available_containers()
 
         for container in available_containers:
             selection_values.append(container)

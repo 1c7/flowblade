@@ -20,11 +20,16 @@
 from gi.repository import Gtk, Gdk
 import cairo
 
+import appconsts
 import cairoarea
+import editorpersistance
+import editorstate
 import guiutils
 import dialogutils
 import gui
 import respaths
+
+MEDIA_MANAGER_WIDTH = 110
 
 SELECTED_BG = (0.1, 0.31, 0.58,1.0)
 
@@ -358,3 +363,133 @@ def selection_changed_callback(selection_target, layout):
     print(selection_target, layout)
 
 
+# ------------------------------------------------------------------ APPLYING LAYOUT
+# self is editorwindow.EditorWindow object
+def do_window_layout(self):
+
+    notebook_vbox = Gtk.VBox(False, 1)
+    notebook_vbox.no_dark_bg = True
+    notebook_vbox.pack_start(self.notebook, True, True, 0)
+    
+    # Top row paned
+    self.top_paned = Gtk.HPaned()
+    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+        self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
+        self.top_paned.pack2(self.monitor_frame, resize=True, shrink=False)
+    else:
+        self.top_paned.pack1(self.mm_panel, resize=False, shrink=False)
+        self.top_paned.pack2(notebook_vbox, resize=True, shrink=False)
+
+    # Top row
+    self.top_row_hbox = Gtk.HBox(False, 0)
+    if top_level_project_panel() == True:
+        self.top_row_hbox.pack_start(self.top_project_panel, False, False, 0)
+    self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
+    self._update_top_row()
+    
+    # Timeline bottom row
+    tline_hbox_3 = Gtk.HBox()
+    tline_hbox_3.pack_start(self.left_corner.widget, False, False, 0)
+    tline_hbox_3.pack_start(self.tline_scroller, True, True, 0)
+
+    # Timeline hbox
+    tline_vbox = Gtk.VBox()
+    tline_vbox.pack_start(self.tline_hbox_1, False, False, 0)
+    tline_vbox.pack_start(self.tline_hbox_2, True, True, 0)
+    tline_vbox.pack_start(self.tline_renderer_hbox, False, False, 0)
+    tline_vbox.pack_start(tline_hbox_3, False, False, 0)
+
+    # Timeline box
+    self.tline_box = Gtk.HBox()
+    self.tline_box.pack_start(tline_vbox, True, True, 0)
+
+    # Timeline pane
+    tline_pane = Gtk.VBox(False, 1)
+    tline_pane.pack_start(self.edit_buttons_frame, False, True, 0)
+    tline_pane.pack_start(self.tline_box, True, True, 0)
+    self.tline_pane = tline_pane
+
+    # VPaned top row / timeline
+    self.app_v_paned = Gtk.VPaned()
+    self.app_v_paned.pack1(self.top_row_hbox, resize=False, shrink=False)
+    self.app_v_paned.pack2(tline_pane, resize=True, shrink=False)
+    self.app_v_paned.no_dark_bg = True
+
+    # Menu box
+    # menubar size 348, 28 if w want to center someting here with set_size_request
+    self.menubar.set_margin_bottom(4)
+    menu_vbox = Gtk.HBox(False, 0)
+    menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)
+    menu_vbox.pack_start(Gtk.Label(), True, True, 0)
+    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+        menu_vbox.pack_start(self.monitor_tc_info.widget, False, False, 0)
+    else:
+        top_row_window_2 = Gtk.HBox(False, 0)
+        top_row_window_2.pack_start(Gtk.Label(), True, True, 0)
+        top_row_window_2.pack_start(self.monitor_tc_info.widget, False, False, 0)
+
+    # Pane
+    pane = Gtk.VBox(False, 1)
+    pane.pack_start(menu_vbox, False, True, 0)
+    pane.pack_start(self.app_v_paned, True, True, 0)
+
+    # Set pane and show window
+    self.window.add(pane)
+    self.window.set_title("Flowblade")
+
+    # Maximize if it seems that we exited maximized, else set size
+    w, h = editorpersistance.prefs.exit_allocation
+    if w != 0: # non-existing prefs file causes w and h to be 0
+        if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
+            self.window.maximize()
+        else:
+            self.window.resize(w, h)
+            self.window.set_position(Gtk.WindowPosition.CENTER)
+    else:
+        self.window.set_position(Gtk.WindowPosition.CENTER)
+
+    # Show window and all of its components
+    self.window.show_all()
+
+    # Show Monitor Window in two window mode
+    if editorpersistance.prefs.global_layout != appconsts.SINGLE_WINDOW:
+        pane2 = Gtk.VBox(False, 1)
+        pane2.pack_start(top_row_window_2, False, False, 0)
+        pane2.pack_start(monitor_frame, True, True, 0)
+
+        # Set pane and show window
+        self.window2.add(pane2)
+        self.window2.set_title("Flowblade")
+
+        # Maximize if it seems that we exited maximized, else set size
+        w, h, x, y = editorpersistance.prefs.exit_allocation_window_2
+
+        if w != 0: # non-existing prefs file causes w and h to be 0
+            if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
+                self.window2.maximize()
+            else:
+                self.window2.resize(w, h)
+
+        self.window2.move(x, y)
+        self.window2.show_all()
+
+    # Set paned positions
+    bin_w = editorpersistance.prefs.mm_paned_position
+    if bin_w < MEDIA_MANAGER_WIDTH + 2:
+        bin_w = 0
+
+    if top_level_project_panel() == False:
+        self.mm_paned.set_position(bin_w)
+
+    # Set saved paned positions
+    self.top_paned.set_position(editorpersistance.prefs.top_paned_position)
+    self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
+
+
+def top_level_project_panel():
+    if editorpersistance.prefs.top_row_layout == appconsts.ALWAYS_TWO_PANELS:
+        return False
+    if editorpersistance.prefs.top_level_project_panel == True and editorstate.SCREEN_WIDTH > 1440 and editorstate.SCREEN_HEIGHT > 898:
+        return True
+
+    return False

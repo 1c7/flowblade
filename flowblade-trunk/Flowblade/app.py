@@ -61,6 +61,7 @@ import dnd
 import diskcachemanagement
 import edit
 import editevent
+import editorlayout
 import editorpersistance
 import editorstate
 import editorwindow
@@ -480,7 +481,7 @@ def create_gui():
         if editorwindow.top_level_project_panel() == False:
             jobs.jobs_notebook_index = 4
     else:
-        if editorwindow.top_level_project_panel() == False:
+        if editorlayout.top_level_project_panel() == False:
             jobs.jobs_notebook_index = 5
 
     # Create window and all child components

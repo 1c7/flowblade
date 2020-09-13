@@ -163,6 +163,27 @@ class EditorWindow:
         self._init_panels_and_guicomponents()
 
         # Build layout
+        # Notebook panel
+        notebook_vbox = Gtk.VBox(False, 1)
+        notebook_vbox.no_dark_bg = True
+        notebook_vbox.pack_start(self.notebook, True, True, 0)
+        
+        # Top row paned
+        self.top_paned = Gtk.HPaned()
+        if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+            self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
+            self.top_paned.pack2(self.monitor_frame, resize=True, shrink=False)
+        else:
+            self.top_paned.pack1(self.mm_panel, resize=False, shrink=False)
+            self.top_paned.pack2(notebook_vbox, resize=True, shrink=False)
+
+        # Top row
+        self.top_row_hbox = Gtk.HBox(False, 0)
+        if top_level_project_panel() == True:
+            self.top_row_hbox.pack_start(self.top_project_panel, False, False, 0)
+        self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
+        self._update_top_row()
+        
         # Timeline bottom row
         tline_hbox_3 = Gtk.HBox()
         tline_hbox_3.pack_start(self.left_corner.widget, False, False, 0)
@@ -208,15 +229,6 @@ class EditorWindow:
         pane = Gtk.VBox(False, 1)
         pane.pack_start(menu_vbox, False, True, 0)
         pane.pack_start(self.app_v_paned, True, True, 0)
-
-        # Tooltips
-        self._add_tool_tips()
-
-        # GUI preferences
-        self._init_gui_to_prefs()
-
-        # Viewmenu initial state
-        self._init_view_menu(ui.get_widget('/MenuBar/ViewMenu'))
 
         # Set pane and show window
         self.window.add(pane)
@@ -266,12 +278,20 @@ class EditorWindow:
         if top_level_project_panel() == False:
             self.mm_paned.set_position(bin_w)
 
+        # Set saved paned positions
         self.top_paned.set_position(editorpersistance.prefs.top_paned_position)
         self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
 
+        # Tooltips
+        self._add_tool_tips()
+
+        # GUI preferences, only tabs position currently
+        self._init_gui_to_prefs()
+
+        # Viewmenu initial state
+        self._init_view_menu(ui.get_widget('/MenuBar/ViewMenu'))
+        
     def _init_panels_and_guicomponents(self):
-
-
         # Media panel
         self.bin_list_view = guicomponents.BinTreeView(
                                         projectaction.bin_selection_changed,
@@ -319,7 +339,7 @@ class EditorWindow:
             self.mm_paned.pack1(self.bins_panel, resize=True, shrink=True)
             self.mm_paned.pack2(media_panel, resize=True, shrink=False)
 
-        mm_panel = guiutils.set_margins(self.mm_paned, 0, 0, 0, 0)
+        self.mm_panel = guiutils.set_margins(self.mm_paned, 0, 0, 0, 0)
 
         # Effects panel
         self.effect_select_list_view = guicomponents.FilterListView()
@@ -429,7 +449,7 @@ class EditorWindow:
             top_project_vbox.pack_start(seq_panel, True, True, 0)
 
             top_project_vbox.set_size_request(PANEL_WIDTH, PANEL_HEIGHT)
-            top_project_panel = guiutils.set_margins(top_project_vbox, 0, 2, 6, 2)
+            self.top_project_panel = guiutils.set_margins(top_project_vbox, 0, 2, 6, 2)
         else:
 
             # Notebook project panel for smallest screens
@@ -455,7 +475,7 @@ class EditorWindow:
         media_label = Gtk.Label(label=_("Media"))
         media_label.no_dark_bg = True
         if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-            self.notebook.append_page(mm_panel, media_label)
+            self.notebook.append_page(self.mm_panel, media_label)
         self.notebook.append_page(media_log_panel, Gtk.Label(label=_("Range Log")))
         self.notebook.append_page(self.effects_panel, Gtk.Label(label=_("Filters")))
         self.notebook.append_page(self.compositors_panel, Gtk.Label(label=_("Compositors")))
@@ -480,7 +500,6 @@ class EditorWindow:
         self._create_monitor_row_widgets()
 
         self.player_buttons = glassbuttons.PlayerButtons()
-#        tooltips = [_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play - Space"), _("Stop - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
         if (editorpersistance.prefs.play_pause == True):
             if (editorpersistance.prefs.timeline_start_end is True):
             # ------------------------------ timeline_start_end_button
@@ -530,31 +549,10 @@ class EditorWindow:
 
         monitor_align = guiutils.set_margins(monitor_vbox, 3, 0, 3, 3)
 
-        monitor_frame = Gtk.Frame()
-        monitor_frame.add(monitor_align)
-        monitor_frame.set_shadow_type(Gtk.ShadowType.ETCHED_OUT)
-        monitor_frame.set_size_request(MONITOR_AREA_WIDTH, appconsts.TOP_ROW_HEIGHT)
-
-        # Notebook panel
-        notebook_vbox = Gtk.VBox(False, 1)
-        notebook_vbox.no_dark_bg = True
-        notebook_vbox.pack_start(self.notebook, True, True, 0)
-
-        # Top row paned
-        self.top_paned = Gtk.HPaned()
-        if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-            self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
-            self.top_paned.pack2(monitor_frame, resize=True, shrink=False)
-        else:
-            self.top_paned.pack1(mm_panel, resize=False, shrink=False)
-            self.top_paned.pack2(notebook_vbox, resize=True, shrink=False)
-
-        # Top row
-        self.top_row_hbox = Gtk.HBox(False, 0)
-        if top_level_project_panel() == True:
-            self.top_row_hbox.pack_start(top_project_panel, False, False, 0)
-        self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
-        self._update_top_row()
+        self.monitor_frame = Gtk.Frame()
+        self.monitor_frame.add(monitor_align)
+        self.monitor_frame.set_shadow_type(Gtk.ShadowType.ETCHED_OUT)
+        self.monitor_frame.set_size_request(MONITOR_AREA_WIDTH, appconsts.TOP_ROW_HEIGHT)
 
         # Edit buttons rows
         self.edit_buttons_row = self._get_edit_buttons_row()
@@ -674,6 +672,8 @@ class EditorWindow:
         # Timeline scroller
         self.tline_scroller = tlinewidgets.TimeLineScroller(updater.tline_scrolled)
 
+
+        
     def _init_cursors(self):
         # Read cursors
         global INSERTMOVE_CURSOR, OVERWRITE_CURSOR, TWOROLL_CURSOR, ONEROLL_CURSOR, \

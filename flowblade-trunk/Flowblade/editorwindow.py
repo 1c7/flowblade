@@ -272,16 +272,12 @@ class EditorWindow:
         self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
 
     def _init_panels_and_guicomponents(self):
-
-<<<<<<< HEAD
         # Disable Blender and G'Mic container clip menu items if not available.
         if containerclip.blender_available() == False:
             ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateBlenderContainerItem').set_sensitive(False)
         if gmic.gmic_available() == False:
             ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateGMicContainerItem').set_sensitive(False)
-            
-=======
->>>>>>> master
+
         # Media panel
         self.bin_list_view = guicomponents.BinTreeView(
                                         projectaction.bin_selection_changed,

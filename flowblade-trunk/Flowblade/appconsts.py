@@ -169,6 +169,7 @@ CONTAINER_CLIPS_UNRENDERED = "container_clips/unrendered"
 CC_CLIP_FRAMES_DIR = "/clip_frames"
 CC_RENDERED_FRAMES_DIR = "/rendered_frames"
 CC_PREVIEW_RENDER_DIR = "/preview_frames"
+USER_SHORTCUTS_DIR =  "user_shortcuts/"
 
 # Luma bands
 SHADOWS = 0
@@ -201,6 +202,7 @@ TRIM_VIEW_OFF = 2
 MIDBAR_TC_LEFT = 0
 MIDBAR_TC_CENTER = 1
 MIDBAR_COMPONENTS_CENTERED = 2
+MIDBAR_TC_FREE = 3
 
 # Windows mode
 SINGLE_WINDOW = 1
@@ -295,3 +297,16 @@ CONTAINER_CLIP_CAIRO_SCRIPT = 2
 CONTAINER_CLIP_BLENDER = 3
 
 CONTAINER_CLIP_VIDEO_CLIP_NAME = "container_clip"
+
+# Middlebar GUI objects
+BUTTON_GROUP_TOOLS = "tool_buttons"
+BUTTON_GROUP_UNDO = "undo_redo"
+BUTTON_GROUP_ZOOM = "zoom_buttons"
+BUTTON_GROUP_EDIT =  "edit_buttons"
+BUTTON_GROUP_SYNC_SPLIT = "edit_buttons_2"
+BUTTON_GROUP_DELETE = "edit_buttons_3"
+BUTTON_GROUP_MONITOR_ADD = "monitor_insert_buttons"
+BIG_TIME_CODE = "big_TC"
+WORKFLOW_LAUNCH = "worflow_launch" 
+TOOL_SELECT = "tool_selector"
+

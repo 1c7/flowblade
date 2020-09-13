@@ -81,7 +81,7 @@ import undo
 import workflow
 
 # GUI size params
-
+MEDIA_MANAGER_WIDTH = 110
 MONITOR_AREA_WIDTH = 600 # defines app min width with NOTEBOOK_WIDTH 400 for small
 
 #IMG_PATH = None
@@ -160,9 +160,55 @@ class EditorWindow:
         # Create all panels and gui components 
         self._init_panels_and_guicomponents()
 
-        # Build layout
+        # Create window pane object.
+        self.pane = Gtk.VBox(False, 1)
+        self.window.add(self.pane)
+
+        # Menu box
+        # menubar size 348, 28 if w want to center someting here with set_size_request
+        self.menubar.set_margin_bottom(4)
+        self.menu_vbox = Gtk.HBox(False, 0)
+        self.menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)
+        self.menu_vbox.pack_start(Gtk.Label(), True, True, 0)
+        if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+            self.menu_vbox.pack_start(self.monitor_tc_info.widget, False, False, 0)
+        else:
+            top_row_window_2 = Gtk.HBox(False, 0)
+            top_row_window_2.pack_start(Gtk.Label(), True, True, 0)
+            top_row_window_2.pack_start(self.monitor_tc_info.widget, False, False, 0)
+
+        # Build layout as defined by user preferences.
         editorlayout.do_window_layout(self)
 
+        # Set title
+        self.window.set_title("Flowblade")
+
+        # Maximize if it seems that we exited maximized, else set size
+        w, h = editorpersistance.prefs.exit_allocation
+        if w != 0: # non-existing prefs file causes w and h to be 0
+            if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
+                self.window.maximize()
+            else:
+                self.window.resize(w, h)
+                self.window.set_position(Gtk.WindowPosition.CENTER)
+        else:
+            self.window.set_position(Gtk.WindowPosition.CENTER)
+
+        # Show window and all of its components
+        self.window.show_all()
+
+        # Set paned positions.
+        bin_w = editorpersistance.prefs.mm_paned_position
+        if bin_w < MEDIA_MANAGER_WIDTH + 2:
+            bin_w = 0
+
+        if editorlayout.top_level_project_panel() == False:
+            self.mm_paned.set_position(bin_w)
+
+        # Set saved paned positions
+        self.top_paned.set_position(editorpersistance.prefs.top_paned_position)
+        self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
+    
         # Tooltips
         self._add_tool_tips()
 
@@ -183,7 +229,7 @@ class EditorWindow:
 
 
         self.bins_panel = panels.get_bins_tree_panel(self.bin_list_view)
-        self.bins_panel.set_size_request(editorlayout.MEDIA_MANAGER_WIDTH, 10) # this component is always expanded, so 10 for minimum size ok
+        self.bins_panel.set_size_request(MEDIA_MANAGER_WIDTH, 10) # this component is always expanded, so 10 for minimum size ok
 
         self.media_list_view = guicomponents.MediaPanel(projectaction.media_file_menu_item_selected,
                                                         projectaction.media_panel_double_click,

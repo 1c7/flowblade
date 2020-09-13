@@ -29,8 +29,6 @@ import dialogutils
 import gui
 import respaths
 
-MEDIA_MANAGER_WIDTH = 110
-
 SELECTED_BG = (0.1, 0.31, 0.58,1.0)
 
 # Edit panels.
@@ -414,42 +412,10 @@ def do_window_layout(self):
     self.app_v_paned.pack1(self.top_row_hbox, resize=False, shrink=False)
     self.app_v_paned.pack2(tline_pane, resize=True, shrink=False)
     self.app_v_paned.no_dark_bg = True
-
-    # Menu box
-    # menubar size 348, 28 if w want to center someting here with set_size_request
-    self.menubar.set_margin_bottom(4)
-    menu_vbox = Gtk.HBox(False, 0)
-    menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)
-    menu_vbox.pack_start(Gtk.Label(), True, True, 0)
-    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-        menu_vbox.pack_start(self.monitor_tc_info.widget, False, False, 0)
-    else:
-        top_row_window_2 = Gtk.HBox(False, 0)
-        top_row_window_2.pack_start(Gtk.Label(), True, True, 0)
-        top_row_window_2.pack_start(self.monitor_tc_info.widget, False, False, 0)
-
+    
     # Pane
-    pane = Gtk.VBox(False, 1)
-    pane.pack_start(menu_vbox, False, True, 0)
-    pane.pack_start(self.app_v_paned, True, True, 0)
-
-    # Set pane and show window
-    self.window.add(pane)
-    self.window.set_title("Flowblade")
-
-    # Maximize if it seems that we exited maximized, else set size
-    w, h = editorpersistance.prefs.exit_allocation
-    if w != 0: # non-existing prefs file causes w and h to be 0
-        if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
-            self.window.maximize()
-        else:
-            self.window.resize(w, h)
-            self.window.set_position(Gtk.WindowPosition.CENTER)
-    else:
-        self.window.set_position(Gtk.WindowPosition.CENTER)
-
-    # Show window and all of its components
-    self.window.show_all()
+    self.pane.pack_start(self.menu_vbox, False, True, 0)
+    self.pane.pack_start(self.app_v_paned, True, True, 0)
 
     # Show Monitor Window in two window mode
     if editorpersistance.prefs.global_layout != appconsts.SINGLE_WINDOW:
@@ -472,19 +438,6 @@ def do_window_layout(self):
 
         self.window2.move(x, y)
         self.window2.show_all()
-
-    # Set paned positions
-    bin_w = editorpersistance.prefs.mm_paned_position
-    if bin_w < MEDIA_MANAGER_WIDTH + 2:
-        bin_w = 0
-
-    if top_level_project_panel() == False:
-        self.mm_paned.set_position(bin_w)
-
-    # Set saved paned positions
-    self.top_paned.set_position(editorpersistance.prefs.top_paned_position)
-    self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
-
 
 def top_level_project_panel():
     if editorpersistance.prefs.top_row_layout == appconsts.ALWAYS_TWO_PANELS:

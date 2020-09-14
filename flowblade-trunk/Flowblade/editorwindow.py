@@ -332,7 +332,7 @@ class EditorWindow:
             render_hbox.pack_start(render_panel_left, True, True, 0)
             render_hbox.pack_start(render_panel_right, True, True, 0)
 
-        render_panel = guiutils.set_margins(render_hbox, 2, 6, 8, 6)
+        self.render_panel = guiutils.set_margins(render_hbox, 2, 6, 8, 6)
 
         # Range Log panel
         media_log_events_list_view = medialog.get_media_log_list_view()
@@ -341,7 +341,7 @@ class EditorWindow:
         media_log_vbox = Gtk.HBox()
         media_log_vbox.pack_start(events_panel, True, True, 0)
 
-        media_log_panel = guiutils.set_margins(media_log_vbox, 6, 6, 6, 6)
+        self.media_log_panel = guiutils.set_margins(media_log_vbox, 6, 6, 6, 6)
         self.media_log_events_list_view = media_log_events_list_view
 
         # Project Panel
@@ -384,24 +384,7 @@ class EditorWindow:
         jobs_panel = jobs.get_jobs_panel()
         jobs_hbox = Gtk.HBox()
         jobs_hbox.pack_start(jobs_panel, True, True, 0)
-        jobs_pane = guiutils.set_margins(jobs_hbox, 6, 6, 6, 6)
-
-        # Notebook
-        self.notebook = Gtk.Notebook()
-        self.notebook.set_size_request(appconsts.NOTEBOOK_WIDTH, appconsts.TOP_ROW_HEIGHT)
-        media_label = Gtk.Label(label=_("Media"))
-        media_label.no_dark_bg = True
-        if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-            self.notebook.append_page(self.mm_panel, media_label)
-        self.notebook.append_page(media_log_panel, Gtk.Label(label=_("Range Log")))
-        self.notebook.append_page(self.effects_panel, Gtk.Label(label=_("Filters")))
-        self.notebook.append_page(self.compositors_panel, Gtk.Label(label=_("Compositors")))
-        if editorlayout.top_level_project_panel() == False:
-            self.notebook.append_page(project_panel, Gtk.Label(label=_("Project")))
-
-        self.notebook.append_page(jobs_pane, Gtk.Label(label=_("Jobs")))
-        self.notebook.append_page(render_panel, Gtk.Label(label=_("Render")))
-        self.notebook.set_tab_pos(Gtk.PositionType.BOTTOM)
+        self.jobs_pane = guiutils.set_margins(jobs_hbox, 6, 6, 6, 6)
 
         # Position bar and decorative frame  for it
         self.pos_bar = PositionBar()

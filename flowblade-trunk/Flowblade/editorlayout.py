@@ -362,9 +362,26 @@ def selection_changed_callback(selection_target, layout):
 
 
 # ------------------------------------------------------------------ APPLYING LAYOUT
-# self is editorwindow.EditorWindow object
+# self is editorwindow.EditorWindow object.
 def do_window_layout(self):
 
+    # Notebook
+    self.notebook = Gtk.Notebook()
+    self.notebook.set_size_request(appconsts.NOTEBOOK_WIDTH, appconsts.TOP_ROW_HEIGHT)
+    media_label = Gtk.Label(label=_("Media"))
+    media_label.no_dark_bg = True
+    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+        self.notebook.append_page(self.mm_panel, media_label)
+    self.notebook.append_page(self.media_log_panel, Gtk.Label(label=_("Range Log")))
+    self.notebook.append_page(self.effects_panel, Gtk.Label(label=_("Filters")))
+    self.notebook.append_page(self.compositors_panel, Gtk.Label(label=_("Compositors")))
+    if top_level_project_panel() == False:
+        self.notebook.append_page(project_panel, Gtk.Label(label=_("Project")))
+
+    self.notebook.append_page(self.jobs_pane, Gtk.Label(label=_("Jobs")))
+    self.notebook.append_page(self.render_panel, Gtk.Label(label=_("Render")))
+    self.notebook.set_tab_pos(Gtk.PositionType.BOTTOM)
+        
     notebook_vbox = Gtk.VBox(False, 1)
     notebook_vbox.no_dark_bg = True
     notebook_vbox.pack_start(self.notebook, True, True, 0)

@@ -120,15 +120,6 @@ def _toggle_image_switch(widget, icons):
     else:
         widget.set_image(not_pressed)
 
-"""
-def top_level_project_panel():
-    if editorpersistance.prefs.top_row_layout == appconsts.ALWAYS_TWO_PANELS:
-        return False
-    if editorpersistance.prefs.top_level_project_panel == True and editorstate.SCREEN_WIDTH > 1440 and editorstate.SCREEN_HEIGHT > 898:
-        return True
-
-    return False
-"""
 
 class EditorWindow:
 
@@ -164,8 +155,7 @@ class EditorWindow:
         self.pane = Gtk.VBox(False, 1)
         self.window.add(self.pane)
 
-        # Menu box
-        # menubar size 348, 28 if w want to center someting here with set_size_request
+        # Menu box.
         self.menubar.set_margin_bottom(4)
         self.menu_vbox = Gtk.HBox(False, 0)
         self.menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)
@@ -186,7 +176,7 @@ class EditorWindow:
         # Maximize if it seems that we exited maximized, else set size
         w, h = editorpersistance.prefs.exit_allocation
         if w != 0: # non-existing prefs file causes w and h to be 0
-            if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
+            if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95): # Things start to get glitchy somehow close 1.00, so if close enough we just maximize.
                 self.window.maximize()
             else:
                 self.window.resize(w, h)
@@ -194,10 +184,10 @@ class EditorWindow:
         else:
             self.window.set_position(Gtk.WindowPosition.CENTER)
 
-        # Show window and all of its components
+        # Show window and all of its components.
         self.window.show_all()
 
-        # Set paned positions.
+        # Set media panel paned position.
         bin_w = editorpersistance.prefs.mm_paned_position
         if bin_w < MEDIA_MANAGER_WIDTH + 2:
             bin_w = 0

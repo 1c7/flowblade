@@ -37,6 +37,7 @@ import gui
 import guicomponents
 import guiutils
 import edit
+import editorlayout
 import editorstate
 from editorstate import current_sequence
 from editorstate import PROJECT
@@ -64,9 +65,6 @@ compositor_changed_since_last_save = False
 # This is updated when filter panel is displayed and cleared when removed.
 # Used to update kfeditors with external tline frame position changes
 keyframe_editor_widgets = []
-
-compositor_notebook_index = 3 # this is set 2 for the 2 window mode
-
 
 def shutdown_polling():
     global _edit_polling_thread
@@ -130,8 +128,7 @@ def set_compositor(new_compositor):
     set_enabled(True)
     _display_compositor_edit_box()
 
-    if editorpersistance.prefs.default_layout == True:
-        gui.middle_notebook.set_current_page(compositor_notebook_index)
+    editorlayout.show_compositor_editor()
 
     global _edit_polling_thread
     # Close old polling

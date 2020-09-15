@@ -554,3 +554,20 @@ def top_level_project_panel():
         return True
 
     return False
+
+
+# ----------------------------------------------------------------- showing panels programmatically 
+def show_compositor_editor():
+    gui.middle_notebook.set_current_page(3)
+
+def show_filter_editor():
+    gui.middle_notebook.set_current_page(2)
+
+def show_jobs_panel():
+    gui.middle_notebook.set_current_page(4)
+
+def show_range_log():
+    gui.middle_notebook.set_current_page(1)
+
+def show_first_panels():
+    gui.middle_notebook.set_current_page(0)

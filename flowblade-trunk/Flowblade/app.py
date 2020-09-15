@@ -475,18 +475,10 @@ def create_gui():
     # Notebook indexes are different for 1 and 2 window layouts
     if editorpersistance.prefs.global_layout != appconsts.SINGLE_WINDOW:
         medialog.range_log_notebook_index = 0
-        compositeeditor.compositor_notebook_index = 2
-        clipeffectseditor.filters_notebook_index = 1
-        jobs.jobs_notebook_index = 3
-        if editorwindow.top_level_project_panel() == False:
-            jobs.jobs_notebook_index = 4
-    else:
-        if editorlayout.top_level_project_panel() == False:
-            jobs.jobs_notebook_index = 5
 
     # Create window and all child components
     editor_window = editorwindow.EditorWindow()
-    
+
     # Make references to various gui components available via gui module
     gui.capture_references(editor_window)
 
@@ -616,7 +608,7 @@ def init_editor_state():
     compositeeditor.clear_compositor()
 
     # Show first pages on notebooks
-    gui.middle_notebook.set_current_page(0)
+    editorlayout.show_first_panels()
 
     # Clear clip selection.
     movemodes.clear_selection_values()

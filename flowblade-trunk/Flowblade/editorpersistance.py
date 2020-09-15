@@ -278,7 +278,7 @@ class EditorPreferences:
         self.AUTO_SAVE_OPTS = None # not used, these are cerated and translated else where
         self.tabs_on_top = False
         self.midbar_tc_left = True
-        self.default_layout = True
+        self.default_layout = True # DEPRECATED
         self.exit_allocation = (0, 0)
         self.media_columns = 3
         self.app_v_paned_position = 500 # Paned get/set position value

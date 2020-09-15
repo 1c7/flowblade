@@ -378,6 +378,7 @@ class EditorWindow:
             project_vbox.pack_start(project_info_panel, False, True, 0)
             project_vbox.pack_start(seq_panel, True, True, 0)
             project_panel = guiutils.set_margins(project_vbox, 0, 2, 6, 2)
+            self.small_screen_project_panel = project_panel
 
         # Jobs panel
         jobs.create_jobs_list_view()

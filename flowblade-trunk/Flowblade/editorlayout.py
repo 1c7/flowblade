@@ -60,7 +60,7 @@ LEFT_COLUMN_TWO_PANELS = 2
 DEFAULT_CONTAINERS = {  DEFAULT_TWO_ROW: {  PANEL_MEDIA: CONTAINER_T1, PANEL_FILTERS: CONTAINER_T1,
                                             PANEL_COMPOSITORS: CONTAINER_T1, PANEL_RANGE_LOG: CONTAINER_T1, 
                                             PANEL_RENDERING: CONTAINER_T1, PANEL_JOBS: CONTAINER_T1, 
-                                            PANEL_PROJECT: SMALL_CONTAINER_T, PANEL_PROJECT_SMALL_SCREEN: CONTAINER_T1, 
+                                            PANEL_PROJECT: SMALL_CONTAINER_T, PANEL_PROJECT_SMALL_SCREEN: None, 
                                             PANEL_MEDIA_AND_BINS_SMALL_SCREEN: CONTAINER_NOT_SET
                                          },
                         LEFT_COLUMN_ONE_PANEL: {    PANEL_MEDIA: CONTAINER_L1, PANEL_FILTERS: CONTAINER_T1,
@@ -117,6 +117,8 @@ _select_rows = None
 _available_general_layouts = None # two row or one or two panel left column
 _available_layouts = None
 
+# Main edited data structure
+_window_layout_data = None
 
 # --------------------------------------------------------------- LAYOUT SAVED DATA
 class WindowLayoutData:
@@ -126,7 +128,7 @@ class WindowLayoutData:
         self.top_row_layout = TOP_ROW_LAYOUT_DEFAULT_THREE
         self.bottom_row_layout = BOTTOM_ROW_LAYOUT_TLINE_ONLY
         
-        self.panels_containers = {}
+        self.panels_containers = DEFAULT_CONTAINERS[DEFAULT_TWO_ROW]
 
         
 # --------------------------------------------------------------- DIALOG GUI
@@ -157,6 +159,9 @@ def show_configuration_dialog():
 
     global _available_general_layouts
     _available_general_layouts = [DEFAULT_TWO_ROW, LEFT_COLUMN_ONE_PANEL, LEFT_COLUMN_TWO_PANELS]
+
+    global _window_layout_data
+    _window_layout_data = WindowLayoutData() # TODO: From editorpersistance.py
 
     dialog = Gtk.Dialog(_("Editor Preferences"), None,
                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -362,29 +367,99 @@ def selection_changed_callback(selection_target, layout):
 
 
 # ------------------------------------------------------------------ APPLYING LAYOUT
-# self is editorwindow.EditorWindow object.
+# @self -- editorwindow.EditorWindow
 def do_window_layout(self):
 
-    # Notebook
+    global _window_layout_data
+    _window_layout_data = WindowLayoutData() # TODO: From editorpersistance.py
+    
+    # Dict panel_id -> panel_object
+    panels = {  PANEL_MEDIA: self.mm_panel,
+                PANEL_FILTERS: self.effects_panel,
+                PANEL_COMPOSITORS: self.compositors_panel,
+                PANEL_RANGE_LOG: self.media_log_panel,
+                PANEL_RENDERING: self.render_panel,
+                PANEL_JOBS: self.jobs_pane,
+                PANEL_PROJECT: self.top_project_panel,
+                PANEL_PROJECT_SMALL_SCREEN: None,
+                PANEL_MEDIA_AND_BINS_SMALL_SCREEN: None}
+
+    if top_level_project_panel() == False:
+        panels[PANEL_PROJECT_SMALL_SCREEN] = self.small_screen_project_panel
+
+    # Dict panel_id -> panel_name
+    panel_names = { PANEL_MEDIA: _("Media"),
+                    PANEL_FILTERS: _("Filters"),
+                    PANEL_COMPOSITORS: _("Compositors"),
+                    PANEL_RANGE_LOG: _("Range Log"),
+                    PANEL_RENDERING : _("Project"),
+                    PANEL_JOBS: _("Jobs"),
+                    PANEL_PROJECT: None,
+                    PANEL_PROJECT_SMALL_SCREEN: None,
+                    PANEL_MEDIA_AND_BINS_SMALL_SCREEN: None}
+
+    # Notebook a.k.a CONTAINER_T1. TODO: Make this work like all other containers
     self.notebook = Gtk.Notebook()
     self.notebook.set_size_request(appconsts.NOTEBOOK_WIDTH, appconsts.TOP_ROW_HEIGHT)
+
+    notebook_vbox = Gtk.VBox(False, 1)
+    notebook_vbox.pack_start(self.notebook, True, True, 0)
+    
+    # Create dict container_id -> list of panels in that container
+    all_containers = {CONTAINER_T1, CONTAINER_T2, CONTAINER_B1, CONTAINER_L1, CONTAINER_L2}
+    container_panels = {}
+    for cont in all_containers:
+        panels_list = []
+        for panel in _window_layout_data.panels_containers:
+            set_cont = _window_layout_data.panels_containers[panel]
+            if set_cont == cont:
+                panels_list.append(panel)
+        container_panels[cont] = panels_list
+    
+    print(container_panels)
+
+    # Create dicts:
+    #             container_id -> container_gui_object
+    #             container_id -> container_notebook
+    gui_containers = {}
+    gui_notebooks = {}
+    for cont in all_containers:
+        panels = container_panels[cont]
+        if len(panels) == 0:
+            gui_container = None
+            gui_notebook = None
+        else:
+            notebook = Gtk.Notebook()
+            notebook.set_size_request(appconsts.NOTEBOOK_WIDTH, appconsts.TOP_ROW_HEIGHT)
+
+            container_notebook_vbox = Gtk.VBox(False, 1)
+            container_notebook_vbox.pack_start(notebook, True, True, 0)
+
+            gui_container = notebook_vbox
+            gui_notebook = notebook
+            
+        gui_containers[cont] = notebook_vbox
+        gui_notebooks[cont] = gui_notebook
+        
+    # Fill containers
+    for notebook in gui_notebooks:
+        if notebook == None:
+            continue
+        
     media_label = Gtk.Label(label=_("Media"))
-    media_label.no_dark_bg = True
     if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
         self.notebook.append_page(self.mm_panel, media_label)
     self.notebook.append_page(self.media_log_panel, Gtk.Label(label=_("Range Log")))
     self.notebook.append_page(self.effects_panel, Gtk.Label(label=_("Filters")))
     self.notebook.append_page(self.compositors_panel, Gtk.Label(label=_("Compositors")))
     if top_level_project_panel() == False:
-        self.notebook.append_page(project_panel, Gtk.Label(label=_("Project")))
+        self.notebook.append_page(self.small_screen_project_panel, Gtk.Label(label=_("Project")))
 
     self.notebook.append_page(self.jobs_pane, Gtk.Label(label=_("Jobs")))
     self.notebook.append_page(self.render_panel, Gtk.Label(label=_("Render")))
     self.notebook.set_tab_pos(Gtk.PositionType.BOTTOM)
-        
-    notebook_vbox = Gtk.VBox(False, 1)
-    notebook_vbox.no_dark_bg = True
-    notebook_vbox.pack_start(self.notebook, True, True, 0)
+  
+
     
     # Top row paned
     self.top_paned = Gtk.HPaned()

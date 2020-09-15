@@ -57,9 +57,9 @@ LEFT_COLUMN_ONE_PANEL = 1
 LEFT_COLUMN_TWO_PANELS = 2
 
 # Default panel containers general layouts
-DEFAULT_CONTAINERS = {  DEFAULT_TWO_ROW: {  PANEL_MEDIA: CONTAINER_T1, PANEL_FILTERS: CONTAINER_T1,
-                                            PANEL_COMPOSITORS: CONTAINER_T1, PANEL_RANGE_LOG: CONTAINER_T1, 
-                                            PANEL_RENDERING: CONTAINER_T1, PANEL_JOBS: CONTAINER_T1, 
+DEFAULT_CONTAINERS = {  DEFAULT_TWO_ROW: {  PANEL_MEDIA: CONTAINER_T1, PANEL_RANGE_LOG: CONTAINER_T1, 
+                                            PANEL_FILTERS: CONTAINER_T1, PANEL_COMPOSITORS: CONTAINER_T1, 
+                                            PANEL_JOBS: CONTAINER_T1, PANEL_RENDERING: CONTAINER_T1,
                                             PANEL_PROJECT: SMALL_CONTAINER_T, PANEL_PROJECT_SMALL_SCREEN: None, 
                                             PANEL_MEDIA_AND_BINS_SMALL_SCREEN: CONTAINER_NOT_SET
                                          },
@@ -424,8 +424,8 @@ def do_window_layout(self):
     gui_containers = {}
     gui_notebooks = {}
     for cont in all_containers:
-        panels = container_panels[cont]
-        if len(panels) == 0:
+        panels_list = container_panels[cont]
+        if len(panels_list) == 0:
             gui_container = None
             gui_notebook = None
         else:
@@ -435,17 +435,32 @@ def do_window_layout(self):
             container_notebook_vbox = Gtk.VBox(False, 1)
             container_notebook_vbox.pack_start(notebook, True, True, 0)
 
-            gui_container = notebook_vbox
+            gui_container = container_notebook_vbox
             gui_notebook = notebook
             
-        gui_containers[cont] = notebook_vbox
+        gui_containers[cont] = gui_container
         gui_notebooks[cont] = gui_notebook
-        
+
+
+    # Temp fix for hardcoded notebook
+    gui_containers[CONTAINER_T1] = notebook_vbox
+    gui_notebooks[CONTAINER_T1] = self.notebook
+
+
     # Fill containers
-    for notebook in gui_notebooks:
+    for cont in gui_notebooks:
+        notebook = gui_notebooks[cont]
         if notebook == None:
             continue
+        panels_list = container_panels[cont]
+        for panel in panels_list:
+             panel_object = panels[panel]
+             panel_name = panel_names[panel]
+             
+             notebook.append_page(panel_object, Gtk.Label(label=panel_name))
         
+        
+    """
     media_label = Gtk.Label(label=_("Media"))
     if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
         self.notebook.append_page(self.mm_panel, media_label)
@@ -458,7 +473,8 @@ def do_window_layout(self):
     self.notebook.append_page(self.jobs_pane, Gtk.Label(label=_("Jobs")))
     self.notebook.append_page(self.render_panel, Gtk.Label(label=_("Render")))
     self.notebook.set_tab_pos(Gtk.PositionType.BOTTOM)
-  
+    """
+    
 
     
     # Top row paned

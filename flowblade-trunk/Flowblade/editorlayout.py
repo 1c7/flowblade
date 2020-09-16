@@ -112,6 +112,7 @@ GENERAL_LAYOUT_NAMES = None
 # GUI components
 _select_rows = None
 
+
 # Single and two window modes and different screen sizes have different selection of possible layouts available.
 # Available layouts are determined at dialog launch.
 _available_general_layouts = None # two row or one or two panel left column
@@ -119,6 +120,9 @@ _available_layouts = None
 
 # Main edited data structure
 _window_layout_data = None
+
+# Dict panel_id -> (notebook, page_index)
+_panels_locations = None
 
 # --------------------------------------------------------------- LAYOUT SAVED DATA
 class WindowLayoutData:
@@ -448,17 +452,21 @@ def do_window_layout(self):
 
 
     # Fill containers
+    global _panels_locations
+    _panels_locations = {}
     for cont in gui_notebooks:
         notebook = gui_notebooks[cont]
         if notebook == None:
             continue
         panels_list = container_panels[cont]
+        page_index = 0
         for panel in panels_list:
-             panel_object = panels[panel]
-             panel_name = panel_names[panel]
-             
-             notebook.append_page(panel_object, Gtk.Label(label=panel_name))
-        
+            panel_object = panels[panel]
+            panel_name = panel_names[panel]
+
+            notebook.append_page(panel_object, Gtk.Label(label=panel_name))
+            _panels_locations[panel] = (notebook, page_index)
+            page_index += 1
         
     """
     media_label = Gtk.Label(label=_("Media"))
@@ -558,16 +566,21 @@ def top_level_project_panel():
 
 # ----------------------------------------------------------------- showing panels programmatically 
 def show_compositor_editor():
-    gui.middle_notebook.set_current_page(3)
+    _show_panel(PANEL_COMPOSITORS) 
 
 def show_filter_editor():
-    gui.middle_notebook.set_current_page(2)
+    _show_panel(PANEL_FILTERS) 
 
 def show_jobs_panel():
-    gui.middle_notebook.set_current_page(4)
+    _show_panel(PANEL_JOBS) 
 
 def show_range_log():
-    gui.middle_notebook.set_current_page(1)
+    _show_panel(PANEL_FILTERS) 
 
 def show_first_panels():
+    # TODO
     gui.middle_notebook.set_current_page(0)
+
+def _show_panel(panel):
+    notebook, page_index = _panels_locations[panel]
+    notebook.set_current_page(page_index)

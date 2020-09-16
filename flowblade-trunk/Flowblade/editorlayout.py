@@ -371,7 +371,7 @@ def selection_changed_callback(selection_target, layout):
 
 
 # ------------------------------------------------------------------ APPLYING LAYOUT
-# @self -- editorwindow.EditorWindow
+# self -- editorwindow.EditorWindow
 def do_window_layout(self):
 
     global _window_layout_data
@@ -423,8 +423,8 @@ def do_window_layout(self):
     print(container_panels)
 
     # Create dicts:
-    #             container_id -> container_gui_object
-    #             container_id -> container_notebook
+    #      container_id -> container_gui_object
+    #      container_id -> container_notebook
     gui_containers = {}
     gui_notebooks = {}
     for cont in all_containers:
@@ -445,11 +445,9 @@ def do_window_layout(self):
         gui_containers[cont] = gui_container
         gui_notebooks[cont] = gui_notebook
 
-
     # Temp fix for hardcoded notebook
     gui_containers[CONTAINER_T1] = notebook_vbox
     gui_notebooks[CONTAINER_T1] = self.notebook
-
 
     # Fill containers
     global _panels_locations
@@ -467,39 +465,27 @@ def do_window_layout(self):
             notebook.append_page(panel_object, Gtk.Label(label=panel_name))
             _panels_locations[panel] = (notebook, page_index)
             page_index += 1
-        
-    """
-    media_label = Gtk.Label(label=_("Media"))
-    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-        self.notebook.append_page(self.mm_panel, media_label)
-    self.notebook.append_page(self.media_log_panel, Gtk.Label(label=_("Range Log")))
-    self.notebook.append_page(self.effects_panel, Gtk.Label(label=_("Filters")))
-    self.notebook.append_page(self.compositors_panel, Gtk.Label(label=_("Compositors")))
-    if top_level_project_panel() == False:
-        self.notebook.append_page(self.small_screen_project_panel, Gtk.Label(label=_("Project")))
-
-    self.notebook.append_page(self.jobs_pane, Gtk.Label(label=_("Jobs")))
-    self.notebook.append_page(self.render_panel, Gtk.Label(label=_("Render")))
-    self.notebook.set_tab_pos(Gtk.PositionType.BOTTOM)
-    """
     
-
-    
-    # Top row paned
+    ################### BUILD LAYOUT ######################
+    # Create container containers
     self.top_paned = Gtk.HPaned()
-    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-        self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
-        self.top_paned.pack2(self.monitor_frame, resize=True, shrink=False)
-    else:
-        self.top_paned.pack1(self.mm_panel, resize=False, shrink=False)
-        self.top_paned.pack2(notebook_vbox, resize=True, shrink=False)
-
-    # Top row
     self.top_row_hbox = Gtk.HBox(False, 0)
-    if top_level_project_panel() == True:
-        self.top_row_hbox.pack_start(self.top_project_panel, False, False, 0)
-    self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
-    self._update_top_row()
+    
+    # Fill container containers
+    # SINGLE_WINDOW
+    if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+        if _window_layout_data.window_layout == DEFAULT_TWO_ROW:
+            if _window_layout_data.top_row_layout == TOP_ROW_LAYOUT_DEFAULT_THREE:
+                self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
+                self.top_paned.pack2(self.monitor_frame, resize=True, shrink=False)
+
+                if top_level_project_panel() == True:
+                    self.top_row_hbox.pack_start(self.top_project_panel, False, False, 0)
+                self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
+            elif _window_layout_data.top_row_layout == TOP_ROW_LAYOUT_MONITOR_CENTER_THREE:
+                pass
+
+    self._update_vu_meter_visibility()
     
     # Timeline bottom row
     tline_hbox_3 = Gtk.HBox()

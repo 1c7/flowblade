@@ -184,9 +184,6 @@ class EditorWindow:
         else:
             self.window.set_position(Gtk.WindowPosition.CENTER)
 
-        # Show window and all of its components.
-        self.window.show_all()
-
         # Set media panel paned position.
         bin_w = editorpersistance.prefs.mm_paned_position
         if bin_w < MEDIA_MANAGER_WIDTH + 2:
@@ -208,6 +205,9 @@ class EditorWindow:
         # Viewmenu initial state
         self._init_view_menu(ui.get_widget('/MenuBar/ViewMenu'))
 
+        # Show window and all of its components.
+        self.window.show_all()
+        
     def _init_panels_and_guicomponents(self):
         # Media panel
         self.bin_list_view = guicomponents.BinTreeView(
@@ -895,6 +895,7 @@ class EditorWindow:
             ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateGMicContainerItem').set_sensitive(False)
             
     def _init_view_menu(self, menu_item):
+        print("_init_view_menu")
         menu = menu_item.get_submenu()
 
         # Full Screen -tem is already in menu, we need separator here
@@ -1029,6 +1030,8 @@ class EditorWindow:
         zoom_fit_menu_item.connect("activate", lambda w: updater.zoom_project_length())
         menu.append(zoom_fit_menu_item)
 
+        print("_init_view_menu DONE")
+        
     def init_compositing_mode_menu(self):
         menu_item = self.uimanager.get_widget('/MenuBar/SequenceMenu/CompositingModeMenu')
         menu = menu_item.get_submenu()
@@ -1162,9 +1165,9 @@ class EditorWindow:
         editorpersistance.prefs.show_vu_meter = widget.get_active()
         editorpersistance.save()
 
-        self._update_top_row(True)
+        self._update_vu_meter_visibility(True)
 
-    def _update_top_row(self, show_all=False):
+    def _update_vu_meter_visibility(self, show_all=False):
         self.top_row_hbox.pack_end(audiomonitoring.get_master_meter(), False, False, 0)
 
         if show_all:

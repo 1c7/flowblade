@@ -87,11 +87,6 @@ BOTTOM_ROW_LAYOUT_PANEL_RIGHT = 5
 LEFT_COLUMN_TWO_TOP_W1 = 6 # Left column with two panels on top row, editor panel and monitor, single window
 LEFT_COLUMN_MONITOR_ONLY_W1 = 7  # Left column with monitor only on top row, single window
 
-# Selection GUI
-WINDOW_LAYOUT_SELECTION = 0
-TOP_ROW_SELECTION = 1
-BOTTOM_ROW_ROW_SELECTION = 2
-
 LAYOUT_IMAGES = {   TOP_ROW_LAYOUT_DEFAULT_THREE:"layout_t_default",
                     TOP_ROW_LAYOUT_MONITOR_CENTER_THREE:"layout_t_monitor_center",
                     TOP_ROW_LAYOUT_TWO_ONLY:"layout_t_two_only",
@@ -103,6 +98,11 @@ LAYOUT_IMAGES = {   TOP_ROW_LAYOUT_DEFAULT_THREE:"layout_t_default",
 
 LAYOUT_ITEM_WIDTH = 150
 LAYOUT_ITEM_HEIGHT = 100
+
+# Selection GUI
+WINDOW_LAYOUT_SELECTION = 0
+TOP_ROW_SELECTION = 1
+BOTTOM_ROW_ROW_SELECTION = 2
 
 # These are set on dialog launch when translations quaranteed to be initialized.
 PANELS_DATA = None

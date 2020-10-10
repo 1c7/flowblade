@@ -114,8 +114,8 @@ _select_rows = None
 
 
 # Single and two window modes and different screen sizes have different selection of possible layouts available.
-# Available layouts are determined at dialog launch.
-_available_general_layouts = None # two row or one or two panel left column
+# Available layouts are determined at dialog launch based on available information.
+_available_general_layouts = None # two row or one or two panel left column.
 _available_layouts = None
 
 # Main edited data structure
@@ -146,8 +146,8 @@ def show_configuration_dialog():
                     PANEL_RENDERING:(True, _("Render Panel")),
                     PANEL_JOBS: (True,_("Jobs panel")),
                     PANEL_PROJECT: (True, _("Project Panel")),
-                    PANEL_PROJECT_SMALL_SCREEN: (True, _("Project Panel Small Screen")),
-                    PANEL_MEDIA_AND_BINS_SMALL_SCREEN: (True, _("Media and Binss Panel Small Screen")) }
+                    PANEL_PROJECT_SMALL_SCREEN: (True, _("Project Panel Small")),
+                    PANEL_MEDIA_AND_BINS_SMALL_SCREEN: (True, _("Media and Bins Panel Small")) }
 
     CONTAINERS_NAMES = {CONTAINER_T1: _("Top Row 1"),
                         CONTAINER_T2: _("Top Row 2"),
@@ -165,7 +165,7 @@ def show_configuration_dialog():
     _available_general_layouts = [DEFAULT_TWO_ROW, LEFT_COLUMN_ONE_PANEL, LEFT_COLUMN_TWO_PANELS]
 
     global _window_layout_data
-    _window_layout_data = WindowLayoutData() # TODO: From editorpersistance.py
+    _window_layout_data = WindowLayoutData() # TODO: Get from editorpersistance.py
 
     dialog = Gtk.Dialog(_("Editor Preferences"), None,
                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -190,8 +190,6 @@ def _configuration_dialog_callback(dialog, response_id):
         return
 
     dialog.destroy()
-
-    
 
 def _get_edit_panel():
     layout_select_combo = Gtk.ComboBoxText()
@@ -244,19 +242,36 @@ def _get_edit_panel():
 
     global _select_rows
     _select_rows = {}
+    panels_data_keys = list(PANELS_DATA.keys())
     
-    container_select_panel = Gtk.VBox(False, 2)
-    for panel in PANELS_DATA:
-        select_row = PanelContainerSelect(panel, available_containers)
-        container_select_panel.pack_start(select_row.widget, False, False, 0)
-        _select_rows[panel] = select_row # These need to be available for setting default containers when changing general layout.
+    container_select_panel_left = Gtk.VBox(False, 2)
+    for i in range(0, 5): 
+        panel_id = panels_data_keys[i]
+        select_row = PanelContainerSelect(panel_id, available_containers)
+        container_select_panel_left.pack_start(select_row.widget, False, False, 0)
+        _select_rows[panel_id] = select_row # These need to be available for setting default containers when changing general layout.
         
-    pane = Gtk.VBox(False, 2)
-    pane.pack_start(layout_select_combo, False, False, 0)
-    pane.pack_start(layout_selection_stack, False, False, 0)
-    pane.pack_start(container_select_panel, False, False, 0)
+    container_select_panel_right = Gtk.VBox(False, 2)
+    for i in range(5, len(PANELS_DATA)): 
+        panel_id = panels_data_keys[i]
+        select_row = PanelContainerSelect(panel_id, available_containers)
+        container_select_panel_right.pack_start(select_row.widget, False, False, 0)
+        _select_rows[panel_id] = select_row # These need to be available for setting default containers when changing general layout.
 
-    return pane
+    container_select_panel = Gtk.HBox(False, 2)
+    container_select_panel.pack_start(container_select_panel_left, False, False, 0)
+    container_select_panel.pack_start(guiutils.pad_label(12,12), False, False, 0)
+    container_select_panel.pack_start(container_select_panel_right, False, False, 0)
+    
+    pane = Gtk.VBox(False, 2)
+    pane.pack_start(guiutils.get_named_frame(_("General Layout"), layout_select_combo), False, False, 0)
+    pane.pack_start(guiutils.pad_label(12, 12), False, False, 0)
+    pane.pack_start(guiutils.get_named_frame(_("Layout Options"), layout_selection_stack), False, False, 0)
+    pane.pack_start(guiutils.pad_label(12, 12), False, False, 0)
+    pane.pack_start(guiutils.get_named_frame(_("Panel Containers"), container_select_panel), False, False, 0)
+    pane.pack_start(guiutils.pad_label(24, 12), False, False, 0)
+
+    return dialogutils.get_alignment2(pane)
 
 
 class LayoutSelectRow:
@@ -344,10 +359,13 @@ class PanelContainerSelect:
             self.container_select_combo.append_text(CONTAINERS_NAMES[container])
 
         self.container_select_combo.set_active(0)
-        
+        left_col_box = guiutils.get_left_justified_box([Gtk.Label(label=name)])
+        left_col_box.set_size_request(200, 32)
+
         self.widget = Gtk.HBox(False, 2)
-        self.widget.pack_start(guiutils.get_right_justified_box([Gtk.Label(label=name)]), False, False, 0)
+        self.widget.pack_start(left_col_box, False, False, 0)
         self.widget.pack_start(self.container_select_combo, False, False, 0)
+
         
     def set_container(self, container):
         selection = self.selection_values.index(container)
@@ -374,10 +392,12 @@ def selection_changed_callback(selection_target, layout):
 # self -- editorwindow.EditorWindow
 def do_window_layout(self):
 
+    ################### CREATE DATA STRUCTURES ######################
+    # Get current layout data
     global _window_layout_data
     _window_layout_data = WindowLayoutData() # TODO: From editorpersistance.py
     
-    # Dict panel_id -> panel_object
+    # Create dict panel_id -> panel_object
     panels = {  PANEL_MEDIA: self.mm_panel,
                 PANEL_FILTERS: self.effects_panel,
                 PANEL_COMPOSITORS: self.compositors_panel,
@@ -391,7 +411,7 @@ def do_window_layout(self):
     if top_level_project_panel() == False:
         panels[PANEL_PROJECT_SMALL_SCREEN] = self.small_screen_project_panel
 
-    # Dict panel_id -> panel_name
+    # Create dict panel_id -> panel_name
     panel_names = { PANEL_MEDIA: _("Media"),
                     PANEL_FILTERS: _("Filters"),
                     PANEL_COMPOSITORS: _("Compositors"),

@@ -902,7 +902,7 @@ class EditorWindow:
         sep = Gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        lay_conf_item = Gtk.MenuItem.new_with_label(_("Editor Window Layout..."))
+        lay_conf_item = Gtk.MenuItem.new_with_label(_("Window Layout..."))
         lay_conf_item.connect("activate", lambda a: editorlayout.show_configuration_dialog())
         lay_conf_item.show()
         menu.append(lay_conf_item)

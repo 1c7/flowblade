@@ -111,7 +111,9 @@ GENERAL_LAYOUT_NAMES = None
 
 # GUI components
 _select_rows = None
-
+_reset_to_defaults_button = None
+_reset_to_saved_button = None
+_apply_changes_button = None
 
 # Single and two window modes and different screen sizes have different selection of possible layouts available.
 # Available layouts are determined at dialog launch based on available information.
@@ -262,13 +264,27 @@ def _get_edit_panel():
     container_select_panel.pack_start(container_select_panel_left, False, False, 0)
     container_select_panel.pack_start(guiutils.pad_label(12,12), False, False, 0)
     container_select_panel.pack_start(container_select_panel_right, False, False, 0)
-    
+
+    global _reset_to_defaults_button, _reset_to_saved_button, _apply_changes_button
+    _reset_to_defaults_button = Gtk.Button(_("Reset To Defaults"))
+    _reset_to_saved_button = Gtk.Button(_("Reset To Saved"))
+    _apply_changes_button = Gtk.Button(_("Apply Changes"))
+
+    action_buttons_row = Gtk.HBox(False, 2)
+    action_buttons_row.pack_start(Gtk.Label(), True, True, 0)
+    action_buttons_row.pack_start(_reset_to_defaults_button, False, False, 0)
+    action_buttons_row.pack_start(_reset_to_saved_button, False, False, 0)
+    action_buttons_row.pack_start(guiutils.pad_label(40, 12), False, False, 0)
+    action_buttons_row.pack_start(_apply_changes_button, False, False, 0)
+
     pane = Gtk.VBox(False, 2)
     pane.pack_start(guiutils.get_named_frame(_("General Layout"), layout_select_combo), False, False, 0)
     pane.pack_start(guiutils.pad_label(12, 12), False, False, 0)
     pane.pack_start(guiutils.get_named_frame(_("Layout Options"), layout_selection_stack), False, False, 0)
     pane.pack_start(guiutils.pad_label(12, 12), False, False, 0)
     pane.pack_start(guiutils.get_named_frame(_("Panel Containers"), container_select_panel), False, False, 0)
+    pane.pack_start(guiutils.pad_label(12, 12), False, False, 0)
+    pane.pack_start(action_buttons_row, False, False, 0)
     pane.pack_start(guiutils.pad_label(24, 12), False, False, 0)
 
     return dialogutils.get_alignment2(pane)

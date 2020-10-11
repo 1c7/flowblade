@@ -404,8 +404,9 @@ def do_window_layout(self):
 def relayout():
     _clear_window_layout()
     _fill_window_layout(gui.editor_window)
-    gui.editor_window.do_final_window_build_actions()
-    
+    #gui.editor_window.do_final_window_build_actions()
+    # Show window and all of its components.
+    gui.editor_window.window.show_all()
     print("!!!!!!!!!! relayout")
 
 def _fill_window_layout(self):

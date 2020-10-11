@@ -167,7 +167,7 @@ def show_configuration_dialog():
     _available_general_layouts = [DEFAULT_TWO_ROW, LEFT_COLUMN_ONE_PANEL, LEFT_COLUMN_TWO_PANELS]
 
     global _window_layout_data
-    _window_layout_data = WindowLayoutData() # TODO: Get from editorpersistance.py
+    _window_layout_data = editorpersistance.prefs.window_layout
 
     dialog = Gtk.Dialog(_("Editor Preferences"), None,
                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -388,31 +388,30 @@ class PanelContainerSelect:
         self.container_select_combo.set_active(selection)
         
 
-# ----------------------------------------------------------------------- CHANGING LAYOUT DATA
-def _general_layout_changed(combo):
-    general_layout = _available_general_layouts[combo.get_active()]
-    layout_selection_stack.set_visible_child_name(str(general_layout))
-    
-    default_containers = DEFAULT_CONTAINERS[general_layout]
-    
-    for panel in default_containers:
-        container = default_containers[panel]
-        select_row = _select_rows[panel]
-        select_row.set_container(container)
-
-def selection_changed_callback(selection_target, layout):
-    print(selection_target, layout)
-
-
 # ------------------------------------------------------------------ APPLYING LAYOUT
-# self -- editorwindow.EditorWindow
 def do_window_layout(self):
-
-    ################### CREATE DATA STRUCTURES ######################
+    # self -- editorwindow.EditorWindow object.
     # Get current layout data
     global _window_layout_data
-    _window_layout_data = WindowLayoutData() # TODO: From editorpersistance.py
+    _window_layout_data = editorpersistance.prefs.window_layout
+    if _window_layout_data == None:
+        _window_layout_data = WindowLayoutData()
+        editorpersistance.prefs.window_layout = _window_layout_data
+        editorpersistance.save()
+
+    _fill_window_layout(self)
+
+def relayout():
+    _clear_window_layout()
+    _fill_window_layout(gui.editor_window)
+    gui.editor_window.do_final_window_build_actions()
     
+    print("!!!!!!!!!! relayout")
+
+def _fill_window_layout(self):
+    # self -- editorwindow.EditorWindow object.
+
+    ################### CREATE NEEDED DATA STRUCTURES  FOR DOING LAYOUT ######################
     # Create dict panel_id -> panel_object
     panels = {  PANEL_MEDIA: self.mm_panel,
                 PANEL_FILTERS: self.effects_panel,
@@ -527,13 +526,15 @@ def do_window_layout(self):
     tline_hbox_3 = Gtk.HBox()
     tline_hbox_3.pack_start(self.left_corner.widget, False, False, 0)
     tline_hbox_3.pack_start(self.tline_scroller, True, True, 0)
-
+    self.tline_hbox_3 = tline_hbox_3
+    
     # Timeline hbox
     tline_vbox = Gtk.VBox()
     tline_vbox.pack_start(self.tline_hbox_1, False, False, 0)
     tline_vbox.pack_start(self.tline_hbox_2, True, True, 0)
     tline_vbox.pack_start(self.tline_renderer_hbox, False, False, 0)
     tline_vbox.pack_start(tline_hbox_3, False, False, 0)
+    self.tline_vbox = tline_vbox
 
     # Timeline box
     self.tline_box = Gtk.HBox()
@@ -584,6 +585,33 @@ def top_level_project_panel():
         return True
 
     return False
+
+def _clear_window_layout():
+    # we need to take all actual GUI panels and other components out of their containers.
+    w = gui.editor_window
+    guiutils.remove_children(w.pane)
+    guiutils.remove_children(w.app_v_paned)
+    guiutils.remove_children(w.tline_pane)
+    guiutils.remove_children(w.tline_box)
+    guiutils.remove_children(w.tline_vbox)
+    guiutils.remove_children(w.tline_hbox_3)
+    guiutils.remove_children(w.top_row_hbox)
+    guiutils.remove_children(w.top_paned)
+
+# ----------------------------------------------------------------------- CHANGING LAYOUT DATA
+def _general_layout_changed(combo):
+    general_layout = _available_general_layouts[combo.get_active()]
+    layout_selection_stack.set_visible_child_name(str(general_layout))
+    
+    default_containers = DEFAULT_CONTAINERS[general_layout]
+    
+    for panel in default_containers:
+        container = default_containers[panel]
+        select_row = _select_rows[panel]
+        select_row.set_container(container)
+
+def selection_changed_callback(selection_target, layout):
+    print(selection_target, layout)
 
 
 # ----------------------------------------------------------------- showing panels programmatically 

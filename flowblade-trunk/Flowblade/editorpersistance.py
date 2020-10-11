@@ -358,5 +358,5 @@ class EditorPreferences:
                                 appconsts.BUTTON_GROUP_MONITOR_ADD, appconsts.BIG_TIME_CODE]
         self.cbutton  = [True, True, True, True, True, True, True, True, True, True] # Toolbar objects active state
         self.colorized_icons = False
-
+        self.window_layout = None # This gets set to editorlayouyt.WindowLayoutData object with default data on first launch.
 

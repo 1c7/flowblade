@@ -147,7 +147,7 @@ class EditorWindow:
         # Init application main menu.
         ui = Gtk.UIManager()
         self._init_app_menu(ui)
-
+        
         # Create all panels and gui components 
         self._init_panels_and_guicomponents()
 
@@ -184,6 +184,9 @@ class EditorWindow:
         else:
             self.window.set_position(Gtk.WindowPosition.CENTER)
 
+        self.do_final_window_build_actions() 
+
+    def do_final_window_build_actions(self):
         # Set media panel paned position.
         bin_w = editorpersistance.prefs.mm_paned_position
         if bin_w < MEDIA_MANAGER_WIDTH + 2:
@@ -203,7 +206,7 @@ class EditorWindow:
         self._init_gui_to_prefs()
 
         # Viewmenu initial state
-        self._init_view_menu(ui.get_widget('/MenuBar/ViewMenu'))
+        self._init_view_menu(self.uimanager.get_widget('/MenuBar/ViewMenu'))
 
         # Show window and all of its components.
         self.window.show_all()

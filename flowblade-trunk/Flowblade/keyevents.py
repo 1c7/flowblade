@@ -31,6 +31,7 @@ import compositeeditor
 import compositormodes
 import glassbuttons
 import gui
+import editorlayout
 import editorpersistance
 import editorstate
 from editorstate import current_sequence
@@ -47,7 +48,6 @@ import multitrimmode
 # Apr-2017 - SvdB
 import shortcuts
 import re
-import rotomask
 import tlineaction
 import tlinerender
 import tlinewidgets
@@ -156,7 +156,7 @@ def key_down(widget, event):
     #debug.test help 
     if event.keyval == Gdk.KEY_F12:
         if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
-            rotomask.show_rotomask()
+            editorlayout.relayout()
         return True
 
     # Key event was not handled here.

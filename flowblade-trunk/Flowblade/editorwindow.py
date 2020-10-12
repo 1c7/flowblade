@@ -184,10 +184,6 @@ class EditorWindow:
         else:
             self.window.set_position(Gtk.WindowPosition.CENTER)
 
-        self.do_final_window_build_actions() 
-
-    def do_final_window_build_actions(self):
-        # Set media panel paned position.
         bin_w = editorpersistance.prefs.mm_paned_position
         if bin_w < MEDIA_MANAGER_WIDTH + 2:
             bin_w = 0

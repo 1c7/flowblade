@@ -49,13 +49,14 @@ CONTAINER_T2 = 2
 CONTAINER_T3 = 3
 CONTAINER_B1 = 4
 SMALL_CONTAINER_T = 5
+CONTAINER_NOT_AVAILABLE = 6
 
 # Default panel containers, everything is on CONTAINER_T1.
 DEFAULT_CONTAINERS = {  PANEL_MEDIA: CONTAINER_T1, PANEL_RANGE_LOG: CONTAINER_T1, 
                         PANEL_FILTERS: CONTAINER_T1, PANEL_COMPOSITORS: CONTAINER_T1, 
                         PANEL_JOBS: CONTAINER_T1, PANEL_RENDERING: CONTAINER_T1,
-                        PANEL_PROJECT: SMALL_CONTAINER_T, PANEL_PROJECT_SMALL_SCREEN: None, 
-                        PANEL_MEDIA_AND_BINS_SMALL_SCREEN: CONTAINER_NOT_SET
+                        PANEL_PROJECT: SMALL_CONTAINER_T, PANEL_PROJECT_SMALL_SCREEN: CONTAINER_NOT_AVAILABLE, 
+                        PANEL_MEDIA_AND_BINS_SMALL_SCREEN: CONTAINER_NOT_AVAILABLE
                       }
 
 # Layout options.
@@ -122,7 +123,7 @@ class WindowLayoutData:
         return result
 
     
-# --------------------------------------------------------------- DIALOG GUI
+# --------------------------------------------------------------- OPEN AND EXIT DIALOG
 def show_configuration_dialog():
     global PANELS_DATA, CONTAINERS_NAMES, GENERAL_LAYOUT_NAMES
     
@@ -140,7 +141,8 @@ def show_configuration_dialog():
                         CONTAINER_T2: _("Top Row 2"),
                         CONTAINER_B1: _("Bottom Row 1"),
                         SMALL_CONTAINER_T: _("Top Small Panel"),
-                        CONTAINER_NOT_SET: _("Container Not Set")}
+                        CONTAINER_NOT_SET: _("Container Not Set"),
+                        CONTAINER_NOT_AVAILABLE:_("N/A")}
 
     global _window_layout_data
     _window_layout_data = editorpersistance.prefs.window_layout
@@ -162,13 +164,16 @@ def show_configuration_dialog():
 def _configuration_dialog_callback(dialog, response_id):
 
     if response_id == Gtk.ResponseType.ACCEPT:
-        #editorpersistance.save()
+        print("saved")
+        editorpersistance.prefs.window_layout = _window_layout_data
+        editorpersistance.save()
         dialog.destroy()
-
+        # TODO: info dialog
         return
 
     dialog.destroy()
 
+# --------------------------------------------------------------- DIALOG GUI
 def _get_edit_panel():       
     top_row = LayoutSelectRow(TOP_ROW_SELECTION, _selection_changed_callback)
     top_row.add_selection_item(LayoutSelectItem(TOP_ROW_LAYOUT_DEFAULT_THREE))
@@ -313,7 +318,12 @@ class PanelContainerSelect:
 
         self.handler_id = self.container_select_combo.connect("changed", self._container_selection_changed)
  
-        left_col_box = guiutils.get_left_justified_box([Gtk.Label(label=name)])
+        name_label = Gtk.Label(label=name)
+        if self.panel == PANEL_PROJECT_SMALL_SCREEN or self.panel == PANEL_MEDIA_AND_BINS_SMALL_SCREEN:
+            if editorstate.screen_size_small() == False:
+                name_label.set_sensitive(False)
+                
+        left_col_box = guiutils.get_left_justified_box([name_label])
         left_col_box.set_size_request(200, 32)
 
         self.widget = Gtk.HBox(False, 2)
@@ -321,24 +331,40 @@ class PanelContainerSelect:
         self.widget.pack_start(self.container_select_combo, False, False, 0)
 
     def fill_combo_options_and_selection_values(self, available_containers):
+        # Block handler and clear options list.
         if self.handler_id != -1:
             self.container_select_combo.handler_block(self.handler_id)
         
         self.selection_values = []
         self.container_select_combo.remove_all()
 
+        # We need to block certain panels from being used if screen size too small.
+        print(self.panel)
+        if self.panel == PANEL_PROJECT_SMALL_SCREEN or self.panel == PANEL_MEDIA_AND_BINS_SMALL_SCREEN:
+            if editorstate.screen_size_small() == False:
+                self.selection_values.append(None)
+                self.container_select_combo.append_text(CONTAINERS_NAMES[CONTAINER_NOT_AVAILABLE])
+                if self.handler_id != -1:
+                    self.container_select_combo.handler_unblock(self.handler_id)
+                self.container_select_combo.set_active(0)
+                self.container_select_combo.set_sensitive(False)
+                return
+                
+        # Create options list.
         for container in available_containers:
             self.selection_values.append(container)
             self.container_select_combo.append_text(CONTAINERS_NAMES[container])
 
+        # Set active current container selection for panel. 
         current_container = _window_layout_data.panels_containers[self.panel]
-        for i in range(0, len(available_containers)):])
+        for i in range(0, len(available_containers)):
             if current_container == available_containers[i]:
                 self.container_select_combo.set_active(i)
                 if self.handler_id != -1:
                     self.container_select_combo.handler_unblock(self.handler_id)
                 return
 
+        # Panel's current container not available.
         if self.handler_id != -1:
             self.container_select_combo.handler_unblock(self.handler_id)
         self.container_select_combo.set_active(0)
@@ -349,6 +375,25 @@ class PanelContainerSelect:
         _window_layout_data.panels_containers[self.panel] = new_container
 
 
+# ----------------------------------------------------------------------- CHANGING LAYOUT DATA
+def _selection_changed_callback(selection_target, layout_option):
+
+    global _window_layout_data
+    if selection_target == TOP_ROW_SELECTION:
+        print("top", layout_option)
+        _window_layout_data.top_row_layout = layout_option
+    else:
+        print("bottom", layout_option)
+        _window_layout_data.bottom_row_layout = layout_option
+    
+    _update_panels_container_options()
+
+def _update_panels_container_options():
+    available_containers = _window_layout_data.get_available_containers()
+    for panel_id, select_row in _select_rows.items():
+        select_row.fill_combo_options_and_selection_values(available_containers)
+    
+
 # ------------------------------------------------------------------ APPLYING LAYOUT
 def do_window_layout(self):
     print("------------------------------------ DO LAYOUT")
@@ -357,7 +402,8 @@ def do_window_layout(self):
     # Get current layout data
     global _window_layout_data
     _window_layout_data = editorpersistance.prefs.window_layout
-    if True: #_window_layout_data == None:
+    #if True: # force default
+    if _window_layout_data == None:
         _window_layout_data = WindowLayoutData()
         editorpersistance.prefs.window_layout = _window_layout_data
         editorpersistance.save()
@@ -385,7 +431,7 @@ def do_window_layout(self):
                     PANEL_RANGE_LOG: _("Range Log"),
                     PANEL_RENDERING : _("Project"),
                     PANEL_JOBS: _("Jobs"),
-                    PANEL_PROJECT: None,
+                    PANEL_PROJECT: _("Project"),
                     PANEL_PROJECT_SMALL_SCREEN: None,
                     PANEL_MEDIA_AND_BINS_SMALL_SCREEN: None}
 
@@ -432,7 +478,7 @@ def do_window_layout(self):
         gui_containers[cont] = gui_container
         gui_notebooks[cont] = gui_notebook
 
-    # Temp fix for hardcoded notebook
+    # Temp fix for hardcoded T1 notebook
     gui_containers[CONTAINER_T1] = notebook_vbox
     gui_notebooks[CONTAINER_T1] = self.notebook
 
@@ -449,11 +495,11 @@ def do_window_layout(self):
         for panel in panels_list:
             panel_object = panels[panel]
             panel_name = panel_names[panel]
-
+            print("panel", panel, cont)
             notebook.append_page(panel_object, Gtk.Label(label=panel_name))
             _panels_locations[panel] = (notebook, page_index)
             page_index += 1
-    
+            print("kkkkkk")
     
     ################### BUILD LAYOUT ######################
     # Create container containers
@@ -471,8 +517,19 @@ def do_window_layout(self):
                 self.top_row_hbox.pack_start(self.top_project_panel, False, False, 0)
             self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
         elif _window_layout_data.top_row_layout == TOP_ROW_LAYOUT_MONITOR_CENTER_THREE:
-            pass
+            print("TOP_ROW_LAYOUT_MONITOR_CENTER_THREE")
+            # Add CONTAINER_T1 and monitor
+            self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
+            self.top_paned.pack2(self.monitor_frame, resize=True, shrink=False)
+            print("qqqqq")
+            self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
+            print("wwww")
+            # Add CONTAINER_T2
+            cont_t2 = gui_containers[CONTAINER_T2]
+            print("jjjjj")
+            self.top_row_hbox.pack_start(cont_t2, True, True, 0)
 
+    print("ppppppp")
     self._update_vu_meter_visibility()
     
     # Timeline bottom row
@@ -539,34 +596,6 @@ def top_level_project_panel():
 
     return False
 
-# ----------------------------------------------------------------------- CHANGING LAYOUT DATA
-"""
-def _general_layout_changed(combo):    
-    default_containers = DEFAULT_CONTAINERS[general_layout]
-    
-    for panel in default_containers:
-        container = default_containers[panel]
-        select_row = _select_rows[panel]
-        select_row.set_container(container)
-"""
-
-def _selection_changed_callback(selection_target, layout_option):
-
-    global _window_layout_data
-    if selection_target == TOP_ROW_SELECTION:
-        print("top", layout_option)
-        _window_layout_data.top_row_layout = layout_option
-    else:
-        print("bottom", layout_option)
-        _window_layout_data.bottom_row_layout = layout_option
-    
-    _update_panels_container_options()
-
-def _update_panels_container_options():
-    available_containers = _window_layout_data.get_available_containers()
-    for panel_id, select_row in _select_rows.items():
-        select_row.fill_combo_options_and_selection_values(available_containers)
-    
 
 # ----------------------------------------------------------------- showing panels programmatically 
 def show_compositor_editor():

@@ -303,14 +303,16 @@ class PanelContainerSelect:
     
     def __init__(self, panel, available_containers):
         self.panel = panel
-        available_containers = available_containers
-        
+          
         always_visible, name = PANELS_DATA[panel]
         
         self.container_select_combo = Gtk.ComboBoxText()
+        self.handler_id = -1
 
         self.fill_combo_options_and_selection_values(available_containers)
 
+        self.handler_id = self.container_select_combo.connect("changed", self._container_selection_changed)
+ 
         left_col_box = guiutils.get_left_justified_box([Gtk.Label(label=name)])
         left_col_box.set_size_request(200, 32)
 
@@ -319,6 +321,9 @@ class PanelContainerSelect:
         self.widget.pack_start(self.container_select_combo, False, False, 0)
 
     def fill_combo_options_and_selection_values(self, available_containers):
+        if self.handler_id != -1:
+            self.container_select_combo.handler_block(self.handler_id)
+        
         self.selection_values = []
         self.container_select_combo.remove_all()
 
@@ -326,12 +331,23 @@ class PanelContainerSelect:
             self.selection_values.append(container)
             self.container_select_combo.append_text(CONTAINERS_NAMES[container])
 
+        current_container = _window_layout_data.panels_containers[self.panel]
+        for i in range(0, len(available_containers)):])
+            if current_container == available_containers[i]:
+                self.container_select_combo.set_active(i)
+                if self.handler_id != -1:
+                    self.container_select_combo.handler_unblock(self.handler_id)
+                return
+
+        if self.handler_id != -1:
+            self.container_select_combo.handler_unblock(self.handler_id)
         self.container_select_combo.set_active(0)
-     
-    def set_container(self, container):
-        selection = self.selection_values.index(container)
-        self.container_select_combo.set_active(selection)
-        
+
+    def _container_selection_changed(self, combo):
+        new_container = self.selection_values[combo.get_active()]
+        global _window_layout_data
+        _window_layout_data.panels_containers[self.panel] = new_container
+
 
 # ------------------------------------------------------------------ APPLYING LAYOUT
 def do_window_layout(self):

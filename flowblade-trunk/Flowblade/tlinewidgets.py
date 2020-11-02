@@ -60,7 +60,7 @@ M_PI = math.pi
 
 REF_LINE_Y = 250 # Y pos of tracks are relative to this. This is recalculated on initilization, so value here is irrelevent.
 
-WIDTH = 430 # this has no effect if smaller then editorwindow.NOTEBOOK_WIDTH + editorwindow.MONITOR_AREA_WIDTH
+WIDTH = 430 # this has no effect if smaller then editorwindow.NOTEBOOK_WIDTH + editorwindow.MONITOR_AREA_WIDTH -- so this never has effect, but we need to set heights and this can remain as dummy value.
 HEIGHT = appconsts.TLINE_HEIGHT # defines window min height together with editorwindow.TOP_ROW_HEIGHT
 STRIP_HEIGHT = tlinerender.STRIP_HEIGHT # timeline rendering control strip height
 
@@ -71,10 +71,13 @@ TEXT_MIN = 12 # if clip shorter, no text
 EMBOSS_MIN = 8 # if clip shorter, no emboss
 FILL_MIN = 1 # if clip shorter, no fill
 TEXT_X = 6 # pos for clip text
+TEXT_Y_HIGH = 40
 TEXT_Y = 29 
 TEXT_Y_SMALL = 17
+WAVEFORM_PAD_HIGH = 50.0
 WAVEFORM_PAD_LARGE = 27
 WAVEFORM_PAD_SMALL = 8
+WAVEFORM_HEIGHT_HIGH = 25.0
 WAVEFORM_HEIGHT_LARGE = 22.0
 WAVEFORM_HEIGHT_SMALL = 17.0
 MARK_PAD = 6
@@ -95,6 +98,7 @@ COMPOSITOR_TRACK_ARROW_WIDTH = 6
 COMPOSITOR_TRACK_ARROW_HEAD_WIDTH = 10
 COMPOSITOR_TRACK_ARROW_HEAD_WIDTH_HEIGHT = 5
 ID_PAD_X = 48 # track id text pos
+ID_PAD_Y_HIGH = 30 # track id text pos for high track
 ID_PAD_Y = 16 # track id text pos
 ID_PAD_Y_SMALL = 4 # track id text pos for small track
 VIDEO_TRACK_V_ICON_POS = (5, 16)
@@ -105,7 +109,9 @@ AUDIO_TRACK_ICON_POS = (5, 18)
 AUDIO_TRACK_ICON_POS_SMALL = (5, 6)
 MUTE_ICON_POS = (5, 4)
 MUTE_ICON_POS_NORMAL = (5, 14)
+MUTE_ICON_POS_HIGH = (5, 30)
 LOCK_POS = (90, 5)
+INSRT_ICON_POS_HIGH = (108, 32)
 INSRT_ICON_POS = (108, 18)
 INSRT_ICON_POS_SMALL = (108, 6)
 
@@ -141,7 +147,7 @@ TC_POINTER_HEAD = None
 SCALE_LINE_Y = 4.5 # scale horizontal line pos
 SMALL_TICK_Y = 18.5 # end for tick drawn in all scales 
 BIG_TICK_Y = 12.5 # end for tick drawn in most zoomed in scales
-TC_Y = 10 # TC text pos in scale
+TC_Y = 12 # TC text pos in scale
 # Timeline scale is rendered with hardcoded steps for hardcoded 
 # pix_per_frame ranges
 DRAW_THRESHOLD_1 = 6 # if pix_per_frame below this, draw secs
@@ -1685,9 +1691,11 @@ class TimeLineCanvas:
         """
         # Get text pos for track height
         track_height = track.height
-        if track_height == sequence.TRACK_HEIGHT_NORMAL:
+        if track_height == sequence.TRACK_HEIGHT_HIGH: 
+            text_y = TEXT_Y_HIGH
+        elif track_height == sequence.TRACK_HEIGHT_NORMAL:
             text_y = TEXT_Y
-        else:
+        elif track_height == sequence.TRACK_HEIGHT_SMALL:
             text_y = TEXT_Y_SMALL
 
         # Get clip indexes for clips overlapping first and last displayed frame.
@@ -1893,18 +1901,18 @@ class TimeLineCanvas:
                                 media_file = PROJECT().get_media_file_for_path(clip.path)
                                 thumb_img = media_file.icon
                             else:
-                                if clip.container_data.rendered_media != None:
-                                    thumb_img = clip.container_data.get_rendered_thumbnail()
-                                else:
-                                    media_file = PROJECT().get_media_file_for_path(clip.path)
+                                media_file = PROJECT().get_media_file_for_path(clip.path)
+                                if media_file != None:
                                     thumb_img = media_file.icon
+                                else:
+                                    thumb_img = clip.container_data.get_rendered_thumbnail()
+
                             cr.rectangle(scale_in + 4, y + 3.5, scale_length - 8, track_height - 6)
                             cr.clip()
                             cr.set_source_surface(thumb_img, scale_in, y - 20)
                             cr.paint()
                             clip_thumbnails[clip.path] = thumb_img
                         except:
-                            print("failed")
                             pass # This fails for rendered fades and transitions
                     
                     if clip.selected:
@@ -2033,11 +2041,13 @@ class TimeLineCanvas:
                                              track_height)
                 cr.clip()
                                          
-                # Get level bar height and position for track height
-                if track.height == sequence.TRACK_HEIGHT_NORMAL:
+                if track.height == sequence.TRACK_HEIGHT_HIGH:
+                    y_pad = WAVEFORM_PAD_HIGH
+                    bar_height = WAVEFORM_HEIGHT_HIGH
+                elif track.height == sequence.TRACK_HEIGHT_NORMAL:
                     y_pad = WAVEFORM_PAD_LARGE
                     bar_height = WAVEFORM_HEIGHT_LARGE
-                else:
+                elif track.height == sequence.TRACK_HEIGHT_SMALL:
                     y_pad = WAVEFORM_PAD_SMALL
                     bar_height = WAVEFORM_HEIGHT_SMALL
                 
@@ -2159,8 +2169,6 @@ class TimeLineCanvas:
 
         if comp.selected == False:
             color = COMPOSITOR_CLIP
-            if editorstate.get_compositing_mode() == appconsts.COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW:
-                color = COMPOSITOR_CLIP_AUTO_FOLLOW
         else:
             color = COMPOSITOR_CLIP_SELECTED
             
@@ -2438,14 +2446,7 @@ class TimeLineColumn:
         
         # Draw bg
         if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
-            stop, r,g,b, a = TRACK_GRAD_STOP1
-            cr.set_source_rgb(r,g,b)
-            cr.rectangle(0, 0, w, h)
-            cr.fill()
-            cr.set_line_width(1.0)
-            cr.set_source_rgb(0, 0, 0)
-            cr.rectangle(0.5, 0.5, w, h - 1)
-            #cr.stroke()
+            pass # removed for better look.
         else:
             cr.set_source_rgb(*BG_COLOR)
             cr.rectangle(0, 0, w, h)
@@ -2467,7 +2468,7 @@ class TimeLineColumn:
     def draw_track(self, cr, track, y, is_insert_track):
         # Draw center area
         center_width = COLUMN_WIDTH - COLUMN_LEFT_PAD - ACTIVE_SWITCH_WIDTH
-        rect = (COLUMN_LEFT_PAD, y, center_width, track.height)
+        rect = (COLUMN_LEFT_PAD - 1, y, center_width + 1, track.height)
         grad = cairo.LinearGradient (COLUMN_LEFT_PAD, y, COLUMN_LEFT_PAD, y + track.height)
         self._add_gradient_color_stops(grad, track)
         cr.rectangle(*rect)
@@ -2496,9 +2497,11 @@ class TimeLineColumn:
         layout.set_font_description(desc)
 
         cr.set_source_rgb(*TRACK_NAME_COLOR)
-        if track.height == sequence.TRACK_HEIGHT_NORMAL:
+        if track.height == sequence.TRACK_HEIGHT_HIGH:
+            text_y = ID_PAD_Y_HIGH
+        elif track.height == sequence.TRACK_HEIGHT_NORMAL:
             text_y = ID_PAD_Y
-        else:
+        elif track.height == sequence.TRACK_HEIGHT_SMALL:
             text_y = ID_PAD_Y_SMALL
         cr.move_to(COLUMN_LEFT_PAD + ID_PAD_X, y + text_y)
         PangoCairo.update_layout(cr, layout)
@@ -2521,17 +2524,23 @@ class TimeLineColumn:
             
         if mute_icon != None:
             ix, iy = MUTE_ICON_POS
-            if track.height > sequence.TRACK_HEIGHT_SMALL:
+            if track.height == sequence.TRACK_HEIGHT_HIGH:
+                ix, iy = MUTE_ICON_POS_HIGH
+            elif track.height == sequence.TRACK_HEIGHT_NORMAL:
                 ix, iy = MUTE_ICON_POS_NORMAL
+            elif track.height == sequence.TRACK_HEIGHT_SMALL:
+                ix, iy = MUTE_ICON_POS
             cr.set_source_surface(mute_icon, int(ix), int(y + iy))
             cr.paint()
 
         # Draw locked icon
         if track.edit_freedom == sequence.LOCKED:
             ix, iy = LOCK_POS
-            if track.height == sequence.TRACK_HEIGHT_NORMAL:
+            if track.height == sequence.TRACK_HEIGHT_HIGH: 
+                iy = ID_PAD_Y_HIGH + 4
+            elif track.height == sequence.TRACK_HEIGHT_NORMAL:
                 iy = ID_PAD_Y + 4
-            else:
+            elif track.height == sequence.TRACK_HEIGHT_SMALL:
                 iy = ID_PAD_Y_SMALL + 4
             cr.set_source_surface(FULL_LOCK_ICON, ix, int(y + iy))
             cr.paint()
@@ -2541,8 +2550,11 @@ class TimeLineColumn:
             stop, r,g,b, a = TRACK_GRAD_STOP1
             cr.set_source_rgb(r,g,b)
         if is_insert_track == True:
-            ix, iy = INSRT_ICON_POS
-            if track.height == sequence.TRACK_HEIGHT_SMALL:
+            if track.height == sequence.TRACK_HEIGHT_HIGH:
+                ix, iy = INSRT_ICON_POS_HIGH
+            elif track.height == sequence.TRACK_HEIGHT_NORMAL:
+                ix, iy = INSRT_ICON_POS
+            elif track.height == sequence.TRACK_HEIGHT_SMALL:
                 ix, iy = INSRT_ICON_POS_SMALL
             cr.set_source_surface(INSERT_ARROW_ICON, ix, y + iy)
             cr.paint()
@@ -2560,7 +2572,6 @@ class TimeLineColumn:
         cr.set_source_rgb(0, 0, 0)
         cr.rectangle(rect[0] + 0.5, rect[1] + 0.5, rect[2] - 1, rect[3])
         cr.stroke()
-
 
 class TimeLineFrameScale:
     """
@@ -2681,7 +2692,7 @@ class TimeLineFrameScale:
 
         # Get draw steps for marks and tc texts
         if fps < 20:
-            spacer_mult = 2 # for fps like 15 this looks bad with out some help
+            spacer_mult = 2 # for fps like 15 this looks bad without some help
         else:
             spacer_mult = 1
             

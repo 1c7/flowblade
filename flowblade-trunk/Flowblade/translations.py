@@ -94,7 +94,7 @@ def init_languages():
         lang = gettext.translation(APP_NAME, locale_path, languages=langs, fallback=True)
 
     # Un-comment for translations tests
-    #lang = gettext.translation(APP_NAME, locale_path, languages=["it"], fallback=True)
+    #lang = gettext.translation(APP_NAME, locale_path, languages=["ru"], fallback=True)
 
     lang.install(APP_NAME) # makes _() a build-in available in all modules without imports
 
@@ -278,6 +278,10 @@ def load_filters_translations():
     filter_names["Fade In"] = _("Fade In")
     filter_names["Fade Out"] = _("Fade Out")
     filter_names["Fade In / Fade Out"] = _("Fade In / Fade Out")
+    filter_names["Lines"] = _("Lines")
+    filter_names["Dust"] = _("Dust")
+    filter_names["Pan Left Channel"] = _("Pan Left Channel")
+    filter_names["Pan Right Channel"] = _("Pan Right Channel")
     
     # param names
     global param_names
@@ -618,6 +622,13 @@ def load_filters_translations():
     param_names["Rotation"]= _("Rotation")
     param_names["X Position"] = _("X Position")
     param_names["Y Position"] = _("Y Position")
+    param_names["Max Diameter"] = _("Max Diameter")
+    param_names["Max Count"] = _("Max Count")
+    param_names["Max Count"] = _("Max Count")
+    param_names["Line Width"] = _("Line Width")
+    param_names["Number"] = _("Number")
+    param_names["Darker"] = _("Darker")
+    param_names["Lighter"] = _("Lighter")
 
     # Combo options
     global combo_options

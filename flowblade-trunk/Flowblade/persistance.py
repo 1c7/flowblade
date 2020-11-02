@@ -69,7 +69,7 @@ load_dialog = None
 all_clips = {}
 sync_clips = []
 
-# Used for for convrtting to and from proxy media using projects
+# Used for for converting to and from proxy media using projects
 project_proxy_mode = -1
 proxy_path_dict = None
 
@@ -129,8 +129,6 @@ def save_project(project, file_path, changed_profile_desc=None):
         s_proj.profile_desc = changed_profile_desc
         _xml_new_paths_for_profile_change = {} # dict acts also as a flag to show that profile change save is happening
         new_profile = mltprofiles.get_profile(changed_profile_desc)
-        #print "Saving changed profile project: ", changed_profile_desc
-        #print "FPS conversion multiplier:", _fps_conv_mult
     else:
         _xml_new_paths_for_profile_change = None # None value acts also as a flag to show that profile change save is _not_ happening
 
@@ -158,7 +156,6 @@ def save_project(project, file_path, changed_profile_desc=None):
             new_xml_file_path = _save_changed_xml_file(s_media_file, new_profile)
             _xml_new_paths_for_profile_change[s_media_file.path] = new_xml_file_path
             s_media_file.path = new_xml_file_path
-            #print "XML path replace for media:", s_media_file.path,  new_xml_file_path
 
         # Remove unpicleable attrs
         remove_attrs(s_media_file, MEDIA_FILE_REMOVE)
@@ -256,7 +253,6 @@ def get_p_clip(clip):
             s_clip.path = new_path
         except:
             # Something is really wrong, this should not be possible
-            # print "Failed to find a new XML file for path:", s_clip.path
             pass 
 
     # Set 'type' attribute for MLT object type
@@ -430,13 +426,21 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
         # This fixes Media Relinked projects with SAVEFILE_VERSION < 4:
         if (not(hasattr(media_file,  "is_proxy_file"))):
             FIX_N_TO_4_MEDIA_FILE_COMPATIBILITY(media_file)
+
+        # Avoid crash in case path attribute is missing (color clips).
+        if not hasattr(media_file, "path"):
+            continue
             
         # Try to find relative path files if needed for non-proxy media files
+        orig_path = media_file.path # looking for missing path changes it and we need save this info for user info dialog on missing asset
         if media_file.is_proxy_file == False:
             if media_file.type != appconsts.PATTERN_PRODUCER and media_file.type != appconsts.IMAGE_SEQUENCE:
                 media_file.path = get_media_asset_path(media_file.path, _load_file_path)
             elif media_file.type == appconsts.IMAGE_SEQUENCE:
                 media_file.path = get_img_seq_media_path(media_file.path, _load_file_path)
+
+        if media_file.path == NOT_FOUND:
+            raise FileProducerNotFoundError(orig_path)
 
         # This attr was added for 1.8. It is not computed for older projects.
         if (not hasattr(media_file, "info")):
@@ -445,9 +449,7 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
         if not hasattr(media_file, "ttl"):
             media_file.ttl = None
 
-        # Avoid crash in case path attribute is missing (color clips).
-        if not hasattr(media_file, "path"):
-            continue
+ 
         # Add container data if not found.
         if not hasattr(media_file, "container_data"):
             media_file.container_data = None
@@ -507,6 +509,11 @@ def fill_sequence_mlt(seq, SAVEFILE_VERSION):
     """
     # Create tractor, field, multitrack
     seq.init_mlt_objects()
+
+    # Compositing mode COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW was removed 2.6->,  we just convert it 
+    # to COMPOSITING_MODE_TOP_DOWN_FREE_MOVE and compositors now work
+    if seq.compositing_mode == appconsts.COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW:
+        seq.compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
     
     # Grap and replace py tracks. Do this way to use same create
     # method as when originally created.
@@ -774,11 +781,8 @@ def get_relative_path(project_file_path, asset_path):
         for filename in fnmatch.filter(filenames, asset_file_name):
             matches.append(os.path.join(root, filename))
     if len(matches) == 1:
-        #print "relative path for: ", asset_file_name
         return matches[0]
     elif  len(matches) > 1:
-        # some error handling may be needed?
-        #print "relative path for: ", asset_file_name
         return matches[0]
     else:
         return NOT_FOUND # no relative path found

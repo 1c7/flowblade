@@ -54,6 +54,7 @@ SYNC_LOCKED = appconsts.SYNC_LOCKED # FEATURE NOT AVAILABLE TO USER CURRENTLY!
 LOCKED = appconsts.LOCKED # no edits allowed
 
 # Display heights
+TRACK_HEIGHT_HIGH = appconsts.TRACK_HEIGHT_HIGH # track height in canvas and column
 TRACK_HEIGHT_NORMAL = appconsts.TRACK_HEIGHT_NORMAL # track height in canvas and column
 TRACK_HEIGHT_SMALL = appconsts.TRACK_HEIGHT_SMALL # track height in canvas and column
 
@@ -82,13 +83,13 @@ PROGRAM_OUT_MODE = 0
 VECTORSCOPE_MODE = 1
 RGB_PARADE_MODE = 2
 
-# black clip
+# Black clip
 black_track_clip = None
 
-# Track that all audio is mixed down to combine for output.
+# The track that all audio is mixed down to combine for output.
 AUDIO_MIX_DOWN_TRACK = 0
 
-# Vectorscop and RGB Parade
+# Vectorscope and RGB Parade
 SCOPE_MIX_VALUES = [0.0, 0.2, 0.5, 0.8, 1.0]
 _scope_over_lay_mix = 2
 
@@ -113,7 +114,6 @@ class Sequence:
         self.watermark_file_path = None
         self.seq_len = 0 # used in trim crash hack, remove when fixed
         self.compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
-        self.tline_render_mode = appconsts.TLINE_RENDERING_OFF
 
         # MLT objects for a multitrack sequence
         self.init_mlt_objects()
@@ -399,7 +399,7 @@ class Sequence:
         not add it to track/playlist object.
         """
         producer = mlt.Producer(self.profile, str(path)) # this runs 0.5s+ on some clips
-
+    
         mltrefhold.hold_ref(producer)
         producer.path = path
         producer.filters = []
@@ -420,7 +420,7 @@ class Sequence:
         # Img seq ttl value
         producer.ttl = ttl
         if ttl != None:
-            producer.set("ttl", int(ttl))
+            producer.set("ttl", str(ttl))
 
         return producer
 
@@ -509,14 +509,26 @@ class Sequence:
             clone_filter = mltfilters.clone_filter_object(f, self.profile)
             clone_clip.attach(clone_filter.mlt_filter)
             clone_clip.filters.append(clone_filter)
-
+    
+    def copy_filters(self, clip, clone_clip):
+        for f in clip.filters:
+            clone_filter = mltfilters.clone_filter_object(f, self.profile)
+            clone_clip.attach(clone_filter.mlt_filter)
+            clone_clip.filters.append(clone_filter)
+            
     def clone_filters(self, clip):
         clone_filters = []
         for f in clip.filters:
             clone_filter = mltfilters.clone_filter_object(f, self.profile)
             clone_filters.append(clone_filter)
         return clone_filters
-
+    
+    def clone_mute_state(self, clip, clone_clip):
+        # Mute 
+        if clip.mute_filter != None:
+            mute_filter = mltfilters.create_mute_volume_filter(self) 
+            mltfilters.do_clip_mute(clone_clip, mute_filter)
+            
     def get_next_id(self):
         """
         Growing id for newly created clip or transition. 
@@ -617,6 +629,7 @@ class Sequence:
         compositor.obey_autofollow = old_compositor.obey_autofollow
         if self.compositing_mode == appconsts.COMPOSITING_MODE_STANDARD_FULL_TRACK:
             compositor.transition.mlt_transition.set("always_active", str(1))
+            compositor.transition.mlt_transition.set("disable", str(0))
         self._plant_compositor(compositor)
         return compositor
     
@@ -1207,7 +1220,6 @@ def create_sequence_clone_with_different_track_count(old_seq, v_tracks, a_tracks
 
     # Copy modes values
     new_seq.compositing_mode = old_seq.compositing_mode
-    new_seq.tline_render_mode = old_seq.tline_render_mode
         
     # copy next clip id data
     new_seq.next_id = old_seq.next_id

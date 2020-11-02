@@ -70,6 +70,7 @@ import preferenceswindow
 import projectaction
 import projectinfogui
 import proxyediting
+import shortcuts
 import titler
 import tlineaction
 import tlinerender
@@ -79,11 +80,9 @@ import updater
 import undo
 import workflow
 
-# GUI size params
+# GUI size params.
 MEDIA_MANAGER_WIDTH = 110
-MONITOR_AREA_WIDTH = 600 # defines app min width with NOTEBOOK_WIDTH 400 for small
-
-IMG_PATH = None
+MONITOR_AREA_WIDTH = 600 # Defines app min width with NOTEBOOK_WIDTH 400 for small screens.
 
 DARK_BG_COLOR = (0.223, 0.247, 0.247, 1.0)
 
@@ -131,47 +130,10 @@ def top_level_project_panel():
 class EditorWindow:
 
     def __init__(self):
-        global IMG_PATH
-        IMG_PATH = respaths.IMAGE_PATH
 
-        # Read cursors
-        global INSERTMOVE_CURSOR, OVERWRITE_CURSOR, TWOROLL_CURSOR, ONEROLL_CURSOR, \
-        ONEROLL_NO_EDIT_CURSOR, TWOROLL_NO_EDIT_CURSOR, SLIDE_CURSOR, SLIDE_NO_EDIT_CURSOR, \
-        MULTIMOVE_CURSOR, MULTIMOVE_NO_EDIT_CURSOR, ONEROLL_RIPPLE_CURSOR, ONEROLL_TOOL, \
-        OVERWRITE_BOX_CURSOR, OVERWRITE_TOOL, CUT_CURSOR, KF_TOOL_CURSOR, MULTI_TRIM_CURSOR
+        self._init_cursors()
 
-        # Aug-2019 - SvdB - BB
-        INSERTMOVE_CURSOR = guiutils.get_cairo_image("insertmove_cursor")
-        OVERWRITE_CURSOR = guiutils.get_cairo_image("overwrite_cursor")
-        OVERWRITE_BOX_CURSOR = guiutils.get_cairo_image("overwrite_cursor_box")
-        TWOROLL_CURSOR = guiutils.get_cairo_image("tworoll_cursor")
-        SLIDE_CURSOR = guiutils.get_cairo_image("slide_cursor")
-        ONEROLL_CURSOR = guiutils.get_cairo_image("oneroll_cursor")
-        ONEROLL_NO_EDIT_CURSOR = guiutils.get_cairo_image("oneroll_noedit_cursor")
-        TWOROLL_NO_EDIT_CURSOR = guiutils.get_cairo_image("tworoll_noedit_cursor")
-        SLIDE_NO_EDIT_CURSOR = guiutils.get_cairo_image("slide_noedit_cursor")
-        MULTIMOVE_CURSOR = guiutils.get_cairo_image("multimove_cursor")
-        MULTIMOVE_NO_EDIT_CURSOR = guiutils.get_cairo_image("multimove_cursor")
-        ONEROLL_TOOL = guiutils.get_cairo_image("oneroll_tool")
-        ONEROLL_RIPPLE_CURSOR = guiutils.get_cairo_image("oneroll_cursor_ripple")
-        OVERWRITE_TOOL = guiutils.get_cairo_image("overwrite_tool")
-        CUT_CURSOR = guiutils.get_cairo_image("cut_cursor")
-        KF_TOOL_CURSOR = guiutils.get_cairo_image("kftool_cursor")
-        MULTI_TRIM_CURSOR = guiutils.get_cairo_image("multitrim_cursor")
-
-        # Context cursors
-        self.context_cursors = {appconsts.POINTER_CONTEXT_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 3, 7),
-                                appconsts.POINTER_CONTEXT_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 14, 7),
-                                appconsts.POINTER_CONTEXT_TRIM_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_trim_left.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_TRIM_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_trim_right.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_BOX_SIDEWAYS:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_COMPOSITOR_MOVE:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_MULTI_ROLL:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "tworoll_cursor.png"), 11, 9),
-                                appconsts.POINTER_CONTEXT_MULTI_SLIP:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "slide_cursor.png"), 9, 9)}
-
-        # Window
+        # Create window(s)
         self.window = Gtk.Window(Gtk.WindowType.TOPLEVEL)
         self.window.set_icon_from_file(respaths.IMAGE_PATH + "flowbladeappicon.png")
         self.window.set_border_width(5)
@@ -189,279 +151,131 @@ class EditorWindow:
         # Player consumer has to be stopped and started when window resized
         self.window.connect("window-state-event", lambda w, e:updater.refresh_player(e))
 
-        # Build menubar
-        # Menubar build resources
-        menu_actions = [
-            ('FileMenu', None, _('_File')),
-            ('New', None, _('_New...'), '<control>N', None, lambda a:projectaction.new_project()),
-            ('Open', None, _('_Open...'), '<control>O', None, lambda a:projectaction.load_project()),
-            ('OpenRecent', None, _('Open Recent')),
-            ('Save', None, _('_Save'), '<control>S', None, lambda a:projectaction.save_project()),
-            ('Save As', None, _('_Save As...'), None, None, lambda a:projectaction.save_project_as()),
-            ('SaveSnapshot', None, _('Save Backup Snapshot...'), None, None, lambda a:projectaction.save_backup_snapshot()),
-            ('ExportMenu', None, _('Export')),
-            ('ExportMeltXML', None, _('MLT XML'), None, None, lambda a:exporting.MELT_XML_export()),
-            ('ExportEDL', None, _('EDL'), None, None, lambda a:exporting.EDL_export()),
-            ('ExportScreenshot', None, _('Current Frame'), None, None, lambda a:exporting.screenshot_export()),
-            ('ExportToArdour', None, _('Current Sequence Audio As Ardour Session'), None, None, lambda a:exporting.ardour_export()),
-            ('Close', None, _('_Close'), None, None, lambda a:projectaction.close_project()),
-            ('Quit', None, _('_Quit'), '<control>Q', None, lambda a:app.shutdown()),
-            ('EditMenu', None, _('_Edit')),
-            ('Undo', None, _('_Undo'), '<control>Z', None, undo.do_undo_and_repaint),
-            ('Redo', None, _('_Redo'), '<control>Y', None, undo.do_redo_and_repaint),
-            ('Copy', None, _('Copy'), '<control>C', None, lambda a:keyevents.copy_action()),
-            ('Paste', None, _('Paste'), '<control>V', None, lambda a:keyevents.paste_action()),
-            ('PasteFilters', None, _('Paste Filters / Properties'), '<control><alt>V', None, lambda a:tlineaction.do_timeline_filters_paste()),
-            ('AddFromMonitor', None, _('Add Monitor Clip')),
-            ('AppendClip', None, _('Append'), None, None, lambda a:tlineaction.append_button_pressed()),
-            ('InsertClip', None, _('Insert'), None, None, lambda a:tlineaction.insert_button_pressed()),
-            ('ThreepointOverWriteClip', None, _('Three Point Overwrite'), None, None, lambda a:tlineaction.three_point_overwrite_pressed()),
-            ('RangeOverWriteClip', None, _('Range Overwrite'), None, None, lambda a:tlineaction.range_overwrite_pressed()),
-            ('CutClip', None, _('Cut Clip'), None, None, lambda a:tlineaction.cut_pressed()),
-            ('SequenceSplit', None, _('Split to new Sequence at Playhead Position'), None, None, lambda a:tlineaction.sequence_split_pressed()),
-            ('DeleteClip', None, _('Lift'), None, None, lambda a:tlineaction.lift_button_pressed()),
-            ('SpliceOutClip', None, _('Splice Out'), None, None, lambda a:tlineaction.splice_out_button_pressed()),
-            ('ResyncSelected', None, _('Resync'),  '<alt>R', None, lambda a:tlineaction.resync_button_pressed()),
-            ('SetSyncParent', None, _('Set Sync Parent'), None, None, lambda a:_this_is_not_used()),
-            ('AddTransition', None, _('Add Single Track Transition'), None, None, lambda a:tlineaction.add_transition_menu_item_selected()),
-            ('AddFade', None, _('Add Single Track Fade'), None, None, lambda a:tlineaction.add_fade_menu_item_selected()),
-            ('ClearFilters', None, _('Clear Filters'), '<alt>C', None, lambda a:clipmenuaction.clear_filters()),
-            ('Timeline', None, _('Timeline')),
-            ('FiltersOff', None, _('All Filters Off'), None, None, lambda a:tlineaction.all_filters_off()),
-            ('FiltersOn', None, _('All Filters On'), None, None, lambda a:tlineaction.all_filters_on()),
-            ('SyncCompositors', None, _('Sync All Compositors'), '<alt>S', None, lambda a:tlineaction.sync_all_compositors()),
-            ('ChangeSequenceTracks', None, _('Change Sequence Tracks Count...'), None, None, lambda a:projectaction.change_sequence_track_count()),
-            ('Watermark', None, _('Watermark...'), None, None, lambda a:menuactions.edit_watermark()),
-            ('DiskCacheManager', None, _('Disk Cache Manager'), None, None, lambda a:diskcachemanagement.show_disk_management_dialog()),
-            ('ProfilesManager', None, _('Profiles Manager'), None, None, lambda a:menuactions.profiles_manager()),
-            ('Preferences', None, _('Preferences'), None, None, lambda a:preferenceswindow.preferences_dialog()),
-            ('ViewMenu', None, _('View')),
-            ('FullScreen', None, _('Fullscreen'), 'F11', None, lambda a:menuactions.toggle_fullscreen()),
-            ('ProjectMenu', None, _('Project')),
-            ('AddMediaClip', None, _('Add Video, Audio or Image...'), None, None, lambda a: projectaction.add_media_files()),
-            ('AddImageSequence', None, _('Add Image Sequence...'), None, None, lambda a:projectaction.add_image_sequence()),
-            ('CreateColorClip', None, _('Create Color Clip...'), None, None, lambda a:patternproducer.create_color_clip()),
-            ('BinMenu', None, _('Bin')),
-            ('AddBin', None, _('Add Bin'), None, None, lambda a:projectaction.add_new_bin()),
-            ('DeleteBin', None, _('Delete Selected Bin'), None, None, lambda a:projectaction.delete_selected_bin()),
-            ('SequenceMenu', None, _('Sequence')),
-            ('AddSequence', None, _('Add New Sequence'), None, None, lambda a:projectaction.add_new_sequence()),
-            ('EditSequence', None, _('Edit Selected Sequence'), None, None, lambda a:projectaction.change_edit_sequence()),
-            ('DeleteSequence', None, _('Delete Selected Sequence'), None, None, lambda a:projectaction.delete_selected_sequence()),
-            ('CompositingModeMenu', None, _('Compositing Mode')),
-            ('TimelineRenderingMenu', None, _('Timeline Rendering')),
-            ('PatternProducersMenu', None, _('Create Pattern Producer')),
-            ('CreateNoiseClip', None, _('Noise'), None, None, lambda a:patternproducer.create_noise_clip()),
-            ('CreateBarsClip', None, _('EBU Bars'), None, None, lambda a:patternproducer.create_bars_clip()),
-            ('CreateIsingClip', None, _('Ising'), None, None, lambda a:patternproducer.create_icing_clip()),
-            ('CreateColorPulseClip', None, _('Color Pulse'), None, None, lambda a:patternproducer.create_color_pulse_clip()),
-            ('CreateCountClip', None, _('Count'), None, None, lambda a:patternproducer.create_count_clip()),
-            ('CompoundClipsMenu', None, _('Create Compound Clip')),
-            ('CreateSelectionCompound', None, _('From Selected Clips'), None, None, lambda a:projectaction.create_selection_compound_clip()),
-            ('CreateSequenceCompound', None, _('From Current Sequence'), None, None, lambda a:projectaction.create_sequence_compound_clip()),
-            ('CreateSequenceFreezeCompound', None, _('From Current Sequence With Freeze Frame at Playhead Position'), None, None, lambda a:projectaction.create_sequence_freeze_frame_compound_clip()),
-            ('AudioSyncCompoundClip', None, _('Audio Sync Merge Clip From 2 Media Items '), None, None, lambda a:audiosync.create_audio_sync_compound_clip()),
-            ('ImportProjectMedia', None, _('Import Media From Project...'), None, None, lambda a:projectaction.import_project_media()),
-            ('ContainerClipsMenu', None, _('Create Container Clip')),
-            ('CreateGMicContainerItem', None, _("From G'Mic Script"), None, None, lambda a:containerclip.create_gmic_media_item()),
-            ('CreateBlenderContainerItem', None, _("From Blender Project"), None, None, lambda a:containerclip.create_blender_media_item()),
-            ('CombineSequences', None, _('Import Another Sequence Into This Sequence...'), None, None, lambda a:projectaction.combine_sequences()),
-            ('LogClipRange', None, _('Log Marked Clip Range'), '<control>L', None, lambda a:medialog.log_range_clicked()),
-            ('ViewProjectEvents', None, _('View Project Events...'), None, None, lambda a:projectaction.view_project_events()),
-            ('RecreateMediaIcons', None, _('Recreate Media Icons...'), None, None, lambda a:menuactions.recreate_media_file_icons()),
-            ('RemoveUnusedMedia', None, _('Remove Unused Media...'), None, None, lambda a:projectaction.remove_unused_media()),
-            ('ChangeProfile', None, _("Change Project Profile..."), None, None, lambda a: projectaction.change_project_profile()),
-            ('ProxyManager', None, _('Proxy Manager'), None, None, lambda a:proxyediting.show_proxy_manager_dialog()),
-            ('ProjectInfo', None, _('Project Info'), None, None, lambda a:menuactions.show_project_info()),
-            ('RenderMenu', None, _('Render')),
-            ('AddToQueue', None, _('Add To Batch Render Queue...'), None, None, lambda a:projectaction.add_to_render_queue()),
-            ('BatchRender', None, _('Batch Render Queue'), None, None, lambda a:batchrendering.launch_batch_rendering()),
-            ('ReRenderTransitionsFades', None, _('Rerender All Rendered Transitions And Fades '), None, None, lambda a:tlineaction.rerender_all_rendered_transitions_and_fades()),
-            ('Render', None, _('Render Timeline'), None, None, lambda a:projectaction.do_rendering()),
-            ('ToolsMenu', None, _('Tools')),
-            ('Titler', None, _('Titler'), None, None, lambda a:titler.show_titler()),
-            ('AudioMix', None, _('Audio Mixer'), None, None, lambda a:audiomonitoring.show_audio_monitor()),
-            ('GMIC', None, _("G'MIC Effects"), None, None, lambda a:gmic.launch_gmic()),
-            ('MediaLink', None, _('Media Relinker'), None, None, lambda a:medialinker.display_linker()),
-            ('HelpMenu', None, _('_Help')),
-            ('QuickReference', None, _('Contents'), None, None, lambda a:menuactions.quick_reference()),
-            ('Environment', None, _('Runtime Environment'), None, None, lambda a:menuactions.environment()),
-            ('KeyboardShortcuts', None, _('Keyboard Shortcuts'), None, None, lambda a:dialogs.keyboard_shortcuts_dialog(self.window, workflow.get_tline_tool_working_set, menuactions.keyboard_shortcuts_callback)),
-            ('About', None, _('About'), None, None, lambda a:menuactions.about()),
-            ('TOOL_ACTION_KEY_1', None, None, '1', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_2', None, None, '2', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_3', None, None, '3', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_4', None, None, '4', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_5', None, None, '5', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_6', None, None, '6', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_7', None, None, '7', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_8', None, None, '8', None, lambda a:_this_is_not_used()),
-            ('TOOL_ACTION_KEY_9', None, None, '9', None, lambda a:_this_is_not_used())
-            ]
+        # Create all panels and gui components 
+        self._init_panels_and_guicomponents()
 
-        menu_string = """<ui>
-            <menubar name='MenuBar'>
-                <menu action='FileMenu'>
-                    <menuitem action='New'/>
-                    <menuitem action='Open'/>
-                    <menu action='OpenRecent'/>
-                    <menuitem action='Save'/>
-                    <menuitem action='Save As'/>
-                    <menuitem action='SaveSnapshot'/>
-                    <separator/>
-                    <menu action='ExportMenu'>
-                        <menuitem action='ExportMeltXML'/>
-                        <menuitem action='ExportEDL'/>
-                        <menuitem action='ExportScreenshot'/>
-                        <menuitem action='ExportToArdour'/>
-                    </menu>
-                    <separator/>
-                    <menuitem action='Close'/>
-                    <menuitem action='Quit'/>
-                </menu>
-                <menu action='EditMenu'>
-                    <menuitem action='Undo'/>
-                    <menuitem action='Redo'/>
-                    <separator/>
-                    <menuitem action='Copy'/>
-                    <menuitem action='Paste'/>
-                    <menuitem action='PasteFilters'/>
-                    <separator/>
-                    <menu action='AddFromMonitor'>
-                        <menuitem action='AppendClip'/>
-                        <menuitem action='InsertClip'/>
-                        <menuitem action='ThreepointOverWriteClip'/>
-                        <menuitem action='RangeOverWriteClip'/>
-                    </menu>
-                    <separator/>
-                    <menuitem action='CutClip'/>
-                    <separator/>
-                    <menuitem action='SpliceOutClip'/>
-                    <menuitem action='DeleteClip'/>
-                    <menuitem action='ResyncSelected'/>
-                    <menuitem action='ClearFilters'/>
-                    <separator/>
-                    <menuitem action='SyncCompositors'/>
-                    <menuitem action='FiltersOff'/>
-                    <menuitem action='FiltersOn'/>
-                    <separator/>
-                    <menuitem action='AddTransition'/>
-                    <menuitem action='AddFade'/>
-                    <separator/>
-                    <menuitem action='ProfilesManager'/>
-                    <menuitem action='DiskCacheManager'/>
-                    <menuitem action='KeyboardShortcuts'/>
-                    <menuitem action='Preferences'/>
-                </menu>
-                <menu action='ViewMenu'>
-                    <menuitem action='FullScreen'/>
-                </menu>
-                <menu action='ProjectMenu'>
-                    <menuitem action='AddMediaClip'/>
-                    <menuitem action='AddImageSequence'/>
-                    <separator/>
-                    <menuitem action='CreateColorClip'/>
-                    <menu action='PatternProducersMenu'>
-                        <menuitem action='CreateNoiseClip'/>
-                        <menuitem action='CreateColorPulseClip'/>
-                        <menuitem action='CreateIsingClip'/>
-                        <menuitem action='CreateBarsClip'/>
-                    </menu>
-                    <menu action='CompoundClipsMenu'>
-                        <menuitem action='CreateSelectionCompound'/>
-                        <menuitem action='CreateSequenceCompound'/>
-                        <menuitem action='AudioSyncCompoundClip'/>
-                    </menu>
-                    <menu action='ContainerClipsMenu'>
-                        <menuitem action='CreateGMicContainerItem'/>
-                        <menuitem action='CreateBlenderContainerItem'/>
-                    </menu>
-                    <separator/>
-                    <menu action='BinMenu'>
-                        <menuitem action='AddBin'/>
-                        <menuitem action='DeleteBin'/>
-                    </menu>
-                    <separator/>
-                    <menuitem action='ImportProjectMedia'/>
-                    <separator/>
-                    <menuitem action='LogClipRange'/>
-                    <separator/>
-                    <menuitem action='ViewProjectEvents'/>
-                    <menuitem action='RecreateMediaIcons'/>
-                    <menuitem action='RemoveUnusedMedia'/>
-                    <separator/>
-                    <menuitem action='ChangeProfile'/>
-                    <separator/>
-                    <menuitem action='ProxyManager'/>
-                </menu>
-                <menu action='SequenceMenu'>
-                    <menuitem action='AddSequence'/>
-                    <menuitem action='EditSequence'/>
-                    <menuitem action='DeleteSequence'/>
-                    <separator/>
-                    <menu action='CompositingModeMenu'/>
-                    <separator/>
-                    <menu action='TimelineRenderingMenu'/>
-                    <separator/>
-                    <menuitem action='CombineSequences'/>
-                    <menuitem action='SequenceSplit'/>
-                    <separator/>
-                    <menuitem action='ChangeSequenceTracks'/>
-                    <menuitem action='Watermark'/>
-                </menu>
-                <menu action='RenderMenu'>
-                    <menuitem action='AddToQueue'/>
-                    <menuitem action='BatchRender'/>
-                    <separator/>
-                    <menuitem action='ReRenderTransitionsFades'/>
-                    <separator/>
-                    <menuitem action='Render'/>
-                </menu>
-                <menu action='ToolsMenu'>
-                    <menuitem action='AudioMix'/>
-                    <separator/>
-                    <menuitem action='Titler'/>
-                    <menuitem action='GMIC'/>
-                    <separator/>
-                    <menuitem action='MediaLink'/>
-                </menu>
-                <menu action='HelpMenu'>
-                    <menuitem action='QuickReference'/>
-                    <menuitem action='Environment'/>
-                    <separator/>
-                    <menuitem action='About'/>
-                </menu>
-          </menubar>
-        </ui>"""
-
-        self.fblade_theme_fix_panels = []
-        self.fblade_theme_fix_panels_darker = []
-
-        # Create global action group
-        action_group = Gtk.ActionGroup('WindowActions')
-        action_group.add_actions(menu_actions, user_data=None)
-
-        # Create UIManager and add accelators to window
+       # Init application main menu.
         ui = Gtk.UIManager()
-        ui.insert_action_group(action_group, 0)
-        ui.add_ui_from_string(menu_string)
-        accel_group = ui.get_accel_group()
-        self.window.add_accel_group(accel_group)
+        self._init_app_menu(ui)
+        
+        # Build layout
+        # Timeline bottom row
+        tline_hbox_3 = Gtk.HBox()
+        tline_hbox_3.pack_start(self.left_corner.widget, False, False, 0)
+        tline_hbox_3.pack_start(self.tline_scroller, True, True, 0)
 
-        # Get menu bar
-        self.menubar = ui.get_widget('/MenuBar')
+        # Timeline vbox
+        tline_vbox = Gtk.VBox()
+        tline_vbox.pack_start(self.tline_hbox_1, False, False, 0)
+        tline_vbox.pack_start(self.tline_hbox_2, True, True, 0)
+        tline_vbox.pack_start(self.tline_renderer_hbox, False, False, 0)
+        tline_vbox.pack_start(tline_hbox_3, False, False, 0)
 
-        # Set reference to UI manager and acclegroup
-        self.uimanager = ui
-        self.accel_group = accel_group
+        tline_vbox_frame = guiutils.get_panel_etched_frame(tline_vbox)
+    
+        # Timeline box
+        self.tline_box = Gtk.HBox()
+        if editorpersistance.prefs.tools_selection == appconsts.TOOL_SELECTOR_IS_LEFT_DOCK:
+            self.tline_box.pack_start(self.tool_dock, False, False, 0)
+        self.tline_box.pack_end(tline_vbox_frame, True, True, 0)
+        
+        # Timeline pane
+        tline_pane = Gtk.VBox(False, 1)
+        tline_pane.pack_start(self.edit_buttons_frame, False, True, 0)
+        tline_pane.pack_start(self.tline_box, True, True, 0)
+        self.tline_pane = tline_pane
 
-        # Add recent projects to menu
-        self.fill_recents_menu_widget(ui.get_widget('/MenuBar/FileMenu/OpenRecent'), projectaction.open_recent_project)
+        # VPaned top row / timeline
+        self.app_v_paned = Gtk.VPaned()
+        self.app_v_paned.pack1(self.top_row_hbox, resize=False, shrink=False)
+        self.app_v_paned.pack2(tline_pane, resize=True, shrink=False)
+        self.app_v_paned.no_dark_bg = True
 
-        # Disable audio mixer if not available
-        if editorstate.audio_monitoring_available == False:
-            ui.get_widget('/MenuBar/ToolsMenu/AudioMix').set_sensitive(False)
+        # Menu box
+        # menubar size 348, 28 if w want to center someting here with set_size_request
+        self.menubar.set_margin_bottom(4)
+        menu_vbox = Gtk.HBox(False, 0)
+        menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)
+        menu_vbox.pack_start(Gtk.Label(), True, True, 0)
+        if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
+            menu_vbox.pack_start(self.monitor_tc_info.widget, False, False, 0)
+        else:
+            top_row_window_2 = Gtk.HBox(False, 0)
+            top_row_window_2.pack_start(Gtk.Label(), True, True, 0)
+            top_row_window_2.pack_start(self.monitor_tc_info.widget, False, False, 0)
 
+        # Pane
+        pane = Gtk.VBox(False, 1)
+        pane.pack_start(menu_vbox, False, True, 0)
+        pane.pack_start(self.app_v_paned, True, True, 0)
+
+        # Tooltips
+        self._add_tool_tips()
+
+        # GUI preferences
+        self._init_gui_to_prefs()
+
+        # Viewmenu initial state
+        self._init_view_menu(ui.get_widget('/MenuBar/ViewMenu'))
+
+        # Set pane and show window
+        self.window.add(pane)
+        self.window.set_title("Flowblade")
+
+        # Maximize if it seems that we exited maximized, else set size
+        w, h = editorpersistance.prefs.exit_allocation
+        if w != 0: # non-existing prefs file causes w and h to be 0
+            if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
+                self.window.maximize()
+            else:
+                self.window.resize(w, h)
+                self.window.set_position(Gtk.WindowPosition.CENTER)
+        else:
+            self.window.set_position(Gtk.WindowPosition.CENTER)
+
+        # Show window and all of its components
+        self.window.show_all()
+
+        # Show Monitor Window in two window mode
+        if editorpersistance.prefs.global_layout != appconsts.SINGLE_WINDOW:
+            pane2 = Gtk.VBox(False, 1)
+            pane2.pack_start(top_row_window_2, False, False, 0)
+            pane2.pack_start(self.monitor_frame, True, True, 0)
+
+            # Set pane and show window
+            self.window2.add(pane2)
+            self.window2.set_title("Flowblade")
+
+            # Maximize if it seems that we exited maximized, else set size
+            w, h, x, y = editorpersistance.prefs.exit_allocation_window_2
+
+            if w != 0: # non-existing prefs file causes w and h to be 0
+                if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
+                    self.window2.maximize()
+                else:
+                    self.window2.resize(w, h)
+
+            self.window2.move(x, y)
+            self.window2.show_all()
+
+        # Set paned positions
+        bin_w = editorpersistance.prefs.mm_paned_position
+        if bin_w < MEDIA_MANAGER_WIDTH + 2:
+            bin_w = 0
+
+        if top_level_project_panel() == False:
+            self.mm_paned.set_position(bin_w)
+
+        self.top_paned.set_position(editorpersistance.prefs.top_paned_position)
+        self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
+
+    def _init_panels_and_guicomponents(self):        
+        # Disable Blender and G'Mic container clip menu items if not available.
+        if containerclip.blender_available() == False:
+            ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateBlenderContainerItem').set_sensitive(False)
+        if gmic.gmic_available() == False:
+            ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateGMicContainerItem').set_sensitive(False)
+            
         # Media panel
         self.bin_list_view = guicomponents.BinTreeView(
                                         projectaction.bin_selection_changed,
@@ -547,8 +361,6 @@ class EditorWindow:
         else:
             self.effects_panel = effects_vbox
 
-        self.fblade_theme_fix_panels.append(self.effects_panel) # may not be needed?
-
         # Compositors panel
         action_row = compositeeditor.get_compositor_clip_panel()
         compositor_editor_panel = guiutils.set_margins(compositeeditor.widgets.value_edit_frame, 0, 0, 4, 0)
@@ -561,8 +373,6 @@ class EditorWindow:
         compositors_vbox.pack_start(action_row, False, False, 0)
 
         self.compositors_panel = guiutils.set_margins(compositors_vbox, 2, 2, 2, 2)
-
-        self.fblade_theme_fix_panels.append(self.compositors_panel)
 
         # Render panel
         try:
@@ -593,7 +403,6 @@ class EditorWindow:
             render_hbox.pack_start(render_panel_right, True, True, 0)
 
         render_panel = guiutils.set_margins(render_hbox, 2, 6, 8, 6)
-        self.fblade_theme_fix_panels.append(render_panel)
 
         # Range Log panel
         media_log_events_list_view = medialog.get_media_log_list_view()
@@ -601,11 +410,9 @@ class EditorWindow:
 
         media_log_vbox = Gtk.HBox()
         media_log_vbox.pack_start(events_panel, True, True, 0)
-        self.fblade_theme_fix_panels.append(media_log_vbox)
 
         media_log_panel = guiutils.set_margins(media_log_vbox, 6, 6, 6, 6)
         self.media_log_events_list_view = media_log_events_list_view
-        self.fblade_theme_fix_panels.append(media_log_panel)
 
         # Project Panel
         # Sequence list
@@ -630,6 +437,8 @@ class EditorWindow:
 
             top_project_vbox.set_size_request(PANEL_WIDTH, PANEL_HEIGHT)
             top_project_panel = guiutils.set_margins(top_project_vbox, 0, 2, 6, 2)
+            top_project_panel_frame = guiutils.get_panel_etched_frame(top_project_panel)
+            guiutils.set_margins(top_project_panel_frame, 0, 0, 0, 1)
         else:
 
             # Notebook project panel for smallest screens
@@ -666,6 +475,9 @@ class EditorWindow:
         self.notebook.append_page(render_panel, Gtk.Label(label=_("Render")))
         self.notebook.set_tab_pos(Gtk.PositionType.BOTTOM)
 
+        notebook_frame = guiutils.get_panel_etched_frame(self.notebook)
+        guiutils.set_margins(notebook_frame, 0, 0, 0, 1)
+
         # Position bar and decorative frame  for it
         self.pos_bar = PositionBar()
         pos_bar_frame = Gtk.Frame()
@@ -684,12 +496,12 @@ class EditorWindow:
         if (editorpersistance.prefs.play_pause == True):
             if (editorpersistance.prefs.timeline_start_end is True):
             # ------------------------------ timeline_start_end_button
-                tooltips = [_("Start- Start key"), _("End- End key"),_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play Pause- Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
+                tooltips = [_("Start - Home key"), _("End - End key"),_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play/Pause- Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
             else:
-                tooltips = [_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play Pause - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
+                tooltips = [_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play/Pause - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
         else:
             if (editorpersistance.prefs.timeline_start_end is True):
-                tooltips = [_("Start- Start key"), _("End- End key"),_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play - Space"), _("Stop - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
+                tooltips = [_("Start - Home key"), _("End - End key"),_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play - Space"), _("Stop - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
             else:
                 tooltips = [_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play - Space"), _("Stop - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
             # ------------------------------End of timeline_start_end_button
@@ -708,8 +520,6 @@ class EditorWindow:
         player_buttons_row.pack_start(self.trim_view_select.widget, False, False, 0)
         player_buttons_row.pack_start(self.view_mode_select.widget, False, False, 0)
         player_buttons_row.set_margin_bottom(2)
-
-        self.fblade_theme_fix_panels_darker.append(player_buttons_row)
 
         # Switch / pos bar row
         sw_pos_hbox = Gtk.HBox(False, 1)
@@ -732,21 +542,21 @@ class EditorWindow:
 
         monitor_align = guiutils.set_margins(monitor_vbox, 3, 0, 3, 3)
 
-        monitor_frame = Gtk.Frame()
-        monitor_frame.add(monitor_align)
-        monitor_frame.set_shadow_type(Gtk.ShadowType.ETCHED_OUT)
-        monitor_frame.set_size_request(MONITOR_AREA_WIDTH, appconsts.TOP_ROW_HEIGHT)
+        self.monitor_frame = Gtk.Frame()
+        self.monitor_frame.add(monitor_align)
+        self.monitor_frame.set_shadow_type(Gtk.ShadowType.ETCHED_OUT)
+        self.monitor_frame.set_size_request(MONITOR_AREA_WIDTH, appconsts.TOP_ROW_HEIGHT)
 
         # Notebook panel
         notebook_vbox = Gtk.VBox(False, 1)
         notebook_vbox.no_dark_bg = True
-        notebook_vbox.pack_start(self.notebook, True, True, 0)
+        notebook_vbox.pack_start(notebook_frame, True, True, 0)
 
         # Top row paned
         self.top_paned = Gtk.HPaned()
         if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
             self.top_paned.pack1(notebook_vbox, resize=False, shrink=False)
-            self.top_paned.pack2(monitor_frame, resize=True, shrink=False)
+            self.top_paned.pack2(self.monitor_frame, resize=True, shrink=False)
         else:
             self.top_paned.pack1(mm_panel, resize=False, shrink=False)
             self.top_paned.pack2(notebook_vbox, resize=True, shrink=False)
@@ -754,20 +564,17 @@ class EditorWindow:
         # Top row
         self.top_row_hbox = Gtk.HBox(False, 0)
         if top_level_project_panel() == True:
-            self.top_row_hbox.pack_start(top_project_panel, False, False, 0)
+            self.top_row_hbox.pack_start(top_project_panel_frame, False, False, 0)
         self.top_row_hbox.pack_start(self.top_paned, True, True, 0)
         self._update_top_row()
 
         # Edit buttons rows
         self.edit_buttons_row = self._get_edit_buttons_row()
-        if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
-            self.edit_buttons_frame = Gtk.Frame()
-            self.edit_buttons_frame.add(self.edit_buttons_row)
-            self.edit_buttons_frame.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
-        else:
-            self.edit_buttons_frame  = self.edit_buttons_row
-
-        # Timeline scale
+        self.edit_buttons_frame = Gtk.Frame()
+        self.edit_buttons_frame.add(self.edit_buttons_row)
+        self.edit_buttons_frame.set_shadow_type(Gtk.ShadowType.ETCHED_OUT)
+        guiutils.set_margins(self.edit_buttons_frame, 1, 0, 0, 0)
+    
         self.tline_scale = tlinewidgets.TimeLineFrameScale(modesetting.set_default_edit_mode,
                                                            updater.mouse_scroll_zoom)
 
@@ -809,6 +616,8 @@ class EditorWindow:
         tline_hbox_1.pack_start(markers_launcher.widget, False, False, 0)
         tline_hbox_1.pack_start(self.tline_scale.widget, True, True, 0)
 
+        self.tline_hbox_1 = tline_hbox_1
+
         # Timeline column
         self.tline_column = tlinewidgets.TimeLineColumn(
                             trackaction.track_active_switch_pressed,
@@ -828,12 +637,21 @@ class EditorWindow:
         dnd.connect_tline(self.tline_canvas.widget, editevent.tline_effect_drop,
                           editevent.tline_media_drop)
 
+        # Create tool dock if needed
+        if editorpersistance.prefs.tools_selection != appconsts.TOOL_SELECTOR_IS_MENU:
+            self.tool_dock = workflow.get_tline_tool_dock()
+        else:
+            self.tool_dock = None
+
         # Timeline middle row
         tline_hbox_2 = Gtk.HBox()
+        #tline_hbox_2.pack_start(guiutils.pad_label(8,2), False, False, 0)
         tline_hbox_2.pack_start(self.tline_column.widget, False, False, 0)
         tline_hbox_2.pack_start(self.tline_canvas.widget, True, True, 0)
-
-        # Timeline rendered row
+        
+        self.tline_hbox_2 = tline_hbox_2
+        
+        # Timeline renderer row
         self.pad_box = Gtk.HBox()
         self.pad_box.set_size_request(tlinewidgets.COLUMN_WIDTH, tlinewidgets.STRIP_HEIGHT)
         self.tline_render_strip = tlinewidgets.TimeLineRenderingControlStrip()
@@ -872,120 +690,330 @@ class EditorWindow:
         # Timeline scroller
         self.tline_scroller = tlinewidgets.TimeLineScroller(updater.tline_scrolled)
 
-        # Timeline bottom row
-        tline_hbox_3 = Gtk.HBox()
-        tline_hbox_3.pack_start(self.left_corner.widget, False, False, 0)
-        tline_hbox_3.pack_start(self.tline_scroller, True, True, 0)
+    def _init_cursors(self):
+        # Read cursors
+        global INSERTMOVE_CURSOR, OVERWRITE_CURSOR, TWOROLL_CURSOR, ONEROLL_CURSOR, \
+        ONEROLL_NO_EDIT_CURSOR, TWOROLL_NO_EDIT_CURSOR, SLIDE_CURSOR, SLIDE_NO_EDIT_CURSOR, \
+        MULTIMOVE_CURSOR, MULTIMOVE_NO_EDIT_CURSOR, ONEROLL_RIPPLE_CURSOR, ONEROLL_TOOL, \
+        OVERWRITE_BOX_CURSOR, OVERWRITE_TOOL, CUT_CURSOR, KF_TOOL_CURSOR, MULTI_TRIM_CURSOR
 
-        # Effect drag'n'drop source panel
-        effect_dnd_panel = effectsdndsource.get_test_panel()
+        # Aug-2019 - SvdB - BB
+        INSERTMOVE_CURSOR = guiutils.get_cairo_image("insertmove_cursor")
+        OVERWRITE_CURSOR = guiutils.get_cairo_image("overwrite_cursor")
+        OVERWRITE_BOX_CURSOR = guiutils.get_cairo_image("overwrite_cursor_box")
+        TWOROLL_CURSOR = guiutils.get_cairo_image("tworoll_cursor")
+        SLIDE_CURSOR = guiutils.get_cairo_image("slide_cursor")
+        ONEROLL_CURSOR = guiutils.get_cairo_image("oneroll_cursor")
+        ONEROLL_NO_EDIT_CURSOR = guiutils.get_cairo_image("oneroll_noedit_cursor")
+        TWOROLL_NO_EDIT_CURSOR = guiutils.get_cairo_image("tworoll_noedit_cursor")
+        SLIDE_NO_EDIT_CURSOR = guiutils.get_cairo_image("slide_noedit_cursor")
+        MULTIMOVE_CURSOR = guiutils.get_cairo_image("multimove_cursor")
+        MULTIMOVE_NO_EDIT_CURSOR = guiutils.get_cairo_image("multimove_cursor")
+        ONEROLL_TOOL = guiutils.get_cairo_image("oneroll_tool")
+        ONEROLL_RIPPLE_CURSOR = guiutils.get_cairo_image("oneroll_cursor_ripple")
+        OVERWRITE_TOOL = guiutils.get_cairo_image("overwrite_tool")
+        CUT_CURSOR = guiutils.get_cairo_image("cut_cursor")
+        KF_TOOL_CURSOR = guiutils.get_cairo_image("kftool_cursor")
+        MULTI_TRIM_CURSOR = guiutils.get_cairo_image("multitrim_cursor")
 
-        tline_vbox = Gtk.VBox()
-        tline_vbox.pack_start(tline_hbox_1, False, False, 0)
-        tline_vbox.pack_start(tline_hbox_2, True, True, 0)
-        tline_vbox.pack_start(self.tline_renderer_hbox, False, False, 0)
-        tline_vbox.pack_start(tline_hbox_3, False, False, 0)
+        # Context cursors
+        self.context_cursors = {appconsts.POINTER_CONTEXT_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 3, 7),
+                                appconsts.POINTER_CONTEXT_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 14, 7),
+                                appconsts.POINTER_CONTEXT_TRIM_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_trim_left.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_TRIM_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_trim_right.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_BOX_SIDEWAYS:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_MOVE:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_MULTI_ROLL:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "tworoll_cursor.png"), 11, 9),
+                                appconsts.POINTER_CONTEXT_MULTI_SLIP:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "slide_cursor.png"), 9, 9)}
 
-        # Timeline box
-        self.tline_box = Gtk.HBox()
-        self.tline_box.pack_start(tline_vbox, True, True, 0)
+    def _init_app_menu(self, ui):
 
-        # Timeline pane
-        tline_left = Gtk.VBox(False, 1)
-        tline_left.pack_start(self.edit_buttons_frame, False, True, 0)
-        tline_left.pack_start(self.tline_box, True, True, 0)
+        # Get customizable shortcuts that are displayed in menu
+        root = shortcuts.get_root()
+        resync_shortcut = shortcuts.get_shortcut_gtk_code(root, "resync")
+        clear_filters_shortcut = shortcuts.get_shortcut_gtk_code(root, "clear_filters")
+        sync_all_shortcut = shortcuts.get_shortcut_gtk_code(root, "sync_all")
+        
+        # Build menubar
+        # Menubar build resources
+        menu_actions = [
+            ('FileMenu', None, _('_File')),
+            ('New', None, _('_New...'), '<control>N', None, lambda a:projectaction.new_project()),
+            ('Open', None, _('_Open...'), '<control>O', None, lambda a:projectaction.load_project()),
+            ('OpenRecent', None, _('Open Recent')),
+            ('Save', None, _('_Save'), '<control>S', None, lambda a:projectaction.save_project()),
+            ('Save As', None, _('_Save As...'), None, None, lambda a:projectaction.save_project_as()),
+            ('SaveSnapshot', None, _('Save Backup Snapshot...'), None, None, lambda a:projectaction.save_backup_snapshot()),
+            ('ExportMenu', None, _('Export')),
+            ('ExportMeltXML', None, _('MLT XML'), None, None, lambda a:exporting.MELT_XML_export()),
+            ('ExportEDL', None, _('EDL'), None, None, lambda a:exporting.EDL_export()),
+            ('ExportScreenshot', None, _('Current Frame'), None, None, lambda a:exporting.screenshot_export()),
+            ('ExportToArdour', None, _('Current Sequence Audio As Ardour Session'), None, None, lambda a:exporting.ardour_export()),
+            ('Close', None, _('_Close'), None, None, lambda a:projectaction.close_project()),
+            ('Quit', None, _('_Quit'), '<control>Q', None, lambda a:app.shutdown()),
+            ('EditMenu', None, _('_Edit')),
+            ('Undo', None, _('_Undo'), '<control>Z', None, undo.do_undo_and_repaint),
+            ('Redo', None, _('_Redo'), '<control>Y', None, undo.do_redo_and_repaint),
+            ('Copy', None, _('Copy'), '<control>C', None, lambda a:keyevents.copy_action()),
+            ('Paste', None, _('Paste'), '<control>V', None, lambda a:keyevents.paste_action()),
+            ('PasteFilters', None, _('Paste Filters / Properties'), '<control><alt>V', None, lambda a:tlineaction.do_timeline_filters_paste()),
+            ('AddFromMonitor', None, _('Add Monitor Clip')),
+            ('AppendClip', None, _('Append'), None, None, lambda a:tlineaction.append_button_pressed()),
+            ('InsertClip', None, _('Insert'), None, None, lambda a:tlineaction.insert_button_pressed()),
+            ('ThreepointOverWriteClip', None, _('Three Point Overwrite'), None, None, lambda a:tlineaction.three_point_overwrite_pressed()),
+            ('RangeOverWriteClip', None, _('Range Overwrite'), None, None, lambda a:tlineaction.range_overwrite_pressed()),
+            ('CutClip', None, _('Cut Clip'), None, None, lambda a:tlineaction.cut_pressed()),
+            ('SequenceSplit', None, _('Split to new Sequence at Playhead Position'), None, None, lambda a:tlineaction.sequence_split_pressed()),
+            ('DeleteClip', None, _('Lift'), None, None, lambda a:tlineaction.lift_button_pressed()),
+            ('SpliceOutClip', None, _('Splice Out'), None, None, lambda a:tlineaction.splice_out_button_pressed()),
+            ('ResyncSelected', None, _('Resync'),  resync_shortcut, None, lambda a:tlineaction.resync_button_pressed()),
+            ('SetSyncParent', None, _('Set Sync Parent'), None, None, lambda a:_this_is_not_used()),
+            ('AddTransition', None, _('Add Single Track Transition'), None, None, lambda a:tlineaction.add_transition_menu_item_selected()),
+            ('AddFade', None, _('Add Single Track Fade'), None, None, lambda a:tlineaction.add_fade_menu_item_selected()),
+            ('ClearFilters', None, _('Clear Filters'), clear_filters_shortcut, None, lambda a:clipmenuaction.clear_filters()),
+            ('Timeline', None, _('Timeline')),
+            ('FiltersOff', None, _('All Filters Off'), None, None, lambda a:tlineaction.all_filters_off()),
+            ('FiltersOn', None, _('All Filters On'), None, None, lambda a:tlineaction.all_filters_on()),
+            ('SyncCompositors', None, _('Sync All Compositors'), sync_all_shortcut, None, lambda a:tlineaction.sync_all_compositors()),
+            ('ChangeSequenceTracks', None, _('Change Sequence Tracks Count...'), None, None, lambda a:projectaction.change_sequence_track_count()),
+            ('Watermark', None, _('Watermark...'), None, None, lambda a:menuactions.edit_watermark()),
+            ('DiskCacheManager', None, _('Disk Cache Manager'), None, None, lambda a:diskcachemanagement.show_disk_management_dialog()),
+            ('ProfilesManager', None, _('Profiles Manager'), None, None, lambda a:menuactions.profiles_manager()),
+            ('Preferences', None, _('Preferences'), None, None, lambda a:preferenceswindow.preferences_dialog()),
+            ('ViewMenu', None, _('View')),
+            ('FullScreen', None, _('Fullscreen'), 'F11', None, lambda a:menuactions.toggle_fullscreen()),
+            ('ProjectMenu', None, _('Project')),
+            ('AddMediaClip', None, _('Add Video, Audio or Image...'), None, None, lambda a: projectaction.add_media_files()),
+            ('AddMediaFolder', None, _('Add Media Folder...'), None, None, lambda a: projectaction.add_media_folder()),
+            ('AddImageSequence', None, _('Add Image Sequence...'), None, None, lambda a:projectaction.add_image_sequence()),
+            ('CreateColorClip', None, _('Create Color Clip...'), None, None, lambda a:patternproducer.create_color_clip()),
+            ('BinMenu', None, _('Bin')),
+            ('AddBin', None, _('Add Bin'), None, None, lambda a:projectaction.add_new_bin()),
+            ('DeleteBin', None, _('Delete Selected Bin'), None, None, lambda a:projectaction.delete_selected_bin()),
+            ('SequenceMenu', None, _('Sequence')),
+            ('AddSequence', None, _('Add New Sequence'), None, None, lambda a:projectaction.add_new_sequence()),
+            ('EditSequence', None, _('Edit Selected Sequence'), None, None, lambda a:projectaction.change_edit_sequence()),
+            ('DeleteSequence', None, _('Delete Selected Sequence'), None, None, lambda a:projectaction.delete_selected_sequence()),
+            ('CompositingModeMenu', None, _('Compositing Mode')),
+            ('TimelineRenderingMenu', None, _('Timeline Rendering')),
+            ('PatternProducersMenu', None, _('Create Pattern Producer')),
+            ('CreateNoiseClip', None, _('Noise'), None, None, lambda a:patternproducer.create_noise_clip()),
+            ('CreateBarsClip', None, _('EBU Bars'), None, None, lambda a:patternproducer.create_bars_clip()),
+            ('CreateIsingClip', None, _('Ising'), None, None, lambda a:patternproducer.create_icing_clip()),
+            ('CreateColorPulseClip', None, _('Color Pulse'), None, None, lambda a:patternproducer.create_color_pulse_clip()),
+            ('CreateCountClip', None, _('Count'), None, None, lambda a:patternproducer.create_count_clip()),
+            ('CreateSelectionCompound', None, _('From Selected Clips'), None, None, lambda a:projectaction.create_selection_compound_clip()),
+            ('CreateSequenceCompound', None, _('From Current Sequence'), None, None, lambda a:projectaction.create_sequence_compound_clip()),
+            ('CreateSequenceFreezeCompound', None, _('From Current Sequence With Freeze Frame at Playhead Position'), None, None, lambda a:projectaction.create_sequence_freeze_frame_compound_clip()),
+            ('AudioSyncCompoundClip', None, _('Audio Sync Merge Clip From 2 Media Items '), None, None, lambda a:audiosync.create_audio_sync_compound_clip()),
+            ('ImportProjectMedia', None, _('Import Media From Project...'), None, None, lambda a:projectaction.import_project_media()),
+            ('ContainerClipsMenu', None, _('Create Container Clip')),
+            ('CreateGMicContainerItem', None, _("From G'Mic Script"), None, None, lambda a:containerclip.create_gmic_media_item()),
+            ('CreateBlenderContainerItem', None, _("From Blender Project"), None, None, lambda a:containerclip.create_blender_media_item()),
+            ('CombineSequences', None, _('Import Another Sequence Into This Sequence...'), None, None, lambda a:projectaction.combine_sequences()),
+            ('LogClipRange', None, _('Log Marked Clip Range'), '<control>L', None, lambda a:medialog.log_range_clicked()),
+            ('ViewProjectEvents', None, _('View Project Events...'), None, None, lambda a:projectaction.view_project_events()),
+            ('RecreateMediaIcons', None, _('Recreate Media Icons...'), None, None, lambda a:menuactions.recreate_media_file_icons()),
+            ('RemoveUnusedMedia', None, _('Remove Unused Media...'), None, None, lambda a:projectaction.remove_unused_media()),
+            ('ChangeProfile', None, _("Change Project Profile..."), None, None, lambda a: projectaction.change_project_profile()),
+            ('ProxyManager', None, _('Proxy Manager'), None, None, lambda a:proxyediting.show_proxy_manager_dialog()),
+            ('ProjectInfo', None, _('Project Info'), None, None, lambda a:menuactions.show_project_info()),
+            ('RenderMenu', None, _('Render')),
+            ('AddToQueue', None, _('Add To Batch Render Queue...'), None, None, lambda a:projectaction.add_to_render_queue()),
+            ('BatchRender', None, _('Batch Render Queue'), None, None, lambda a:batchrendering.launch_batch_rendering()),
+            ('ReRenderTransitionsFades', None, _('Rerender All Rendered Transitions And Fades '), None, None, lambda a:tlineaction.rerender_all_rendered_transitions_and_fades()),
+            ('Render', None, _('Render Timeline'), None, None, lambda a:projectaction.do_rendering()),
+            ('ToolsMenu', None, _('Tools')),
+            ('Titler', None, _('Titler'), None, None, lambda a:titler.show_titler()),
+            ('AudioMix', None, _('Audio Mixer'), None, None, lambda a:audiomonitoring.show_audio_monitor()),
+            ('GMIC', None, _("G'MIC Effects"), None, None, lambda a:gmic.launch_gmic()),
+            ('MediaLink', None, _('Media Relinker'), None, None, lambda a:medialinker.display_linker()),
+            ('HelpMenu', None, _('_Help')),
+            ('QuickReference', None, _('Contents'), None, None, lambda a:menuactions.quick_reference()),
+            ('Environment', None, _('Runtime Environment'), None, None, lambda a:menuactions.environment()),
+            ('KeyboardShortcuts', None, _('Keyboard Shortcuts'), None, None, lambda a:dialogs.keyboard_shortcuts_dialog(self.window, workflow.get_tline_tool_working_set, menuactions.keyboard_shortcuts_callback, keyevents.change_single_shortcut, menuactions.keyboard_shortcuts_menu_item_selected_callback)),
+            ('About', None, _('About'), None, None, lambda a:menuactions.about()),
+            ('TOOL_ACTION_KEY_1', None, None, '1', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_2', None, None, '2', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_3', None, None, '3', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_4', None, None, '4', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_5', None, None, '5', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_6', None, None, '6', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_7', None, None, '7', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_8', None, None, '8', None, lambda a:_this_is_not_used()),
+            ('TOOL_ACTION_KEY_9', None, None, '9', None, lambda a:_this_is_not_used())
+            ]
 
-        tline_pane = Gtk.HBox(False, 1)
-        tline_pane.pack_start(effect_dnd_panel, False, False, 0)
-        tline_pane.pack_start(tline_left, True, True, 0)
+        menu_string = """<ui>
+            <menubar name='MenuBar'>
+                <menu action='FileMenu'>
+                    <menuitem action='New'/>
+                    <menuitem action='Open'/>
+                    <menu action='OpenRecent'/>
+                    <menuitem action='Save'/>
+                    <menuitem action='Save As'/>
+                    <menuitem action='SaveSnapshot'/>
+                    <separator/>
+                    <menu action='ExportMenu'>
+                        <menuitem action='ExportMeltXML'/>
+                        <menuitem action='ExportEDL'/>
+                        <menuitem action='ExportScreenshot'/>
+                        <menuitem action='ExportToArdour'/>
+                    </menu>
+                    <separator/>
+                    <menuitem action='Close'/>
+                    <menuitem action='Quit'/>
+                </menu>
+                <menu action='EditMenu'>
+                    <menuitem action='Undo'/>
+                    <menuitem action='Redo'/>
+                    <separator/>
+                    <menuitem action='Copy'/>
+                    <menuitem action='Paste'/>
+                    <menuitem action='PasteFilters'/>
+                    <separator/>
+                    <menu action='AddFromMonitor'>
+                        <menuitem action='AppendClip'/>
+                        <menuitem action='InsertClip'/>
+                        <menuitem action='ThreepointOverWriteClip'/>
+                        <menuitem action='RangeOverWriteClip'/>
+                    </menu>
+                    <separator/>
+                    <menuitem action='CutClip'/>
+                    <separator/>
+                    <menuitem action='SpliceOutClip'/>
+                    <menuitem action='DeleteClip'/>
+                    <menuitem action='ResyncSelected'/>
+                    <menuitem action='ClearFilters'/>
+                    <separator/>
+                    <menuitem action='SyncCompositors'/>
+                    <menuitem action='FiltersOff'/>
+                    <menuitem action='FiltersOn'/>
+                    <separator/>
+                    <menuitem action='AddTransition'/>
+                    <menuitem action='AddFade'/>
+                    <separator/>
+                    <menuitem action='ProfilesManager'/>
+                    <menuitem action='DiskCacheManager'/>
+                    <menuitem action='KeyboardShortcuts'/>
+                    <menuitem action='Preferences'/>
+                </menu>
+                <menu action='ViewMenu'>
+                    <menuitem action='FullScreen'/>
+                </menu>
+                <menu action='ProjectMenu'>
+                    <menuitem action='AddMediaClip'/>
+                    <menuitem action='AddImageSequence'/>
+                    <menuitem action='AddMediaFolder'/>
+                    <separator/>
+                    <menuitem action='CreateColorClip'/>
+                    <menu action='PatternProducersMenu'>
+                        <menuitem action='CreateNoiseClip'/>
+                        <menuitem action='CreateColorPulseClip'/>
+                        <menuitem action='CreateIsingClip'/>
+                        <menuitem action='CreateBarsClip'/>
+                    </menu>
+                    <menu action='ContainerClipsMenu'>
+                        <menuitem action='CreateSelectionCompound'/>
+                        <menuitem action='CreateSequenceCompound'/>
+                        <menuitem action='AudioSyncCompoundClip'/>
+                        <separator/>
+                        <menuitem action='CreateGMicContainerItem'/>
+                        <menuitem action='CreateBlenderContainerItem'/>
+                    </menu>
+                    <separator/>
+                    <menu action='BinMenu'>
+                        <menuitem action='AddBin'/>
+                        <menuitem action='DeleteBin'/>
+                    </menu>
+                    <separator/>
+                    <menuitem action='ImportProjectMedia'/>
+                    <separator/>
+                    <menuitem action='LogClipRange'/>
+                    <separator/>
+                    <menuitem action='ViewProjectEvents'/>
+                    <menuitem action='RecreateMediaIcons'/>
+                    <menuitem action='RemoveUnusedMedia'/>
+                    <separator/>
+                    <menuitem action='ChangeProfile'/>
+                    <separator/>
+                    <menuitem action='ProxyManager'/>
+                </menu>
+                <menu action='SequenceMenu'>
+                    <menuitem action='AddSequence'/>
+                    <menuitem action='EditSequence'/>
+                    <menuitem action='DeleteSequence'/>
+                    <separator/>
+                    <menu action='CompositingModeMenu'/>
+                    <separator/>
+                    <menu action='TimelineRenderingMenu'/>
+                    <separator/>
+                    <menuitem action='CombineSequences'/>
+                    <menuitem action='SequenceSplit'/>
+                    <separator/>
+                    <menuitem action='ChangeSequenceTracks'/>
+                    <menuitem action='Watermark'/>
+                </menu>
+                <menu action='RenderMenu'>
+                    <menuitem action='AddToQueue'/>
+                    <menuitem action='BatchRender'/>
+                    <separator/>
+                    <menuitem action='ReRenderTransitionsFades'/>
+                    <separator/>
+                    <menuitem action='Render'/>
+                </menu>
+                <menu action='ToolsMenu'>
+                    <menuitem action='AudioMix'/>
+                    <separator/>
+                    <menuitem action='Titler'/>
+                    <menuitem action='GMIC'/>
+                    <separator/>
+                    <menuitem action='MediaLink'/>
+                </menu>
+                <menu action='HelpMenu'>
+                    <menuitem action='QuickReference'/>
+                    <menuitem action='Environment'/>
+                    <separator/>
+                    <menuitem action='About'/>
+                </menu>
+          </menubar>
+        </ui>"""
 
-        self.tline_pane = tline_pane
+        # Hide Blender menu item for Flatpaks
+        if editorstate.app_running_from == editorstate.RUNNING_FROM_FLATPAK:
+            ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateBlenderContainerItem').set_visible(False)
+        
+        # Create global action group
+        action_group = Gtk.ActionGroup('WindowActions')
+        action_group.add_actions(menu_actions, user_data=None)
 
-        # VPaned top row / timeline
-        self.app_v_paned = Gtk.VPaned()
-        self.app_v_paned.pack1(self.top_row_hbox, resize=False, shrink=False)
-        self.app_v_paned.pack2(tline_pane, resize=True, shrink=False)
-        self.app_v_paned.no_dark_bg = True
+        # Use UIManager and add accelators to window.
+        ui.insert_action_group(action_group, 0)
+        ui.add_ui_from_string(menu_string)
+        accel_group = ui.get_accel_group()
+        self.window.add_accel_group(accel_group)
 
-        # Menu box
-        # menubar size 348, 28 if w want to center someting here with set_size_request
-        self.menubar.set_margin_bottom(4)
-        menu_vbox = Gtk.HBox(False, 0)
-        menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)
-        menu_vbox.pack_start(Gtk.Label(), True, True, 0)
-        if editorpersistance.prefs.global_layout == appconsts.SINGLE_WINDOW:
-            menu_vbox.pack_start(self.monitor_tc_info.widget, False, False, 0)
-        else:
-            top_row_window_2 = Gtk.HBox(False, 0)
-            top_row_window_2.pack_start(Gtk.Label(), True, True, 0)
-            top_row_window_2.pack_start(self.monitor_tc_info.widget, False, False, 0)
+        # Get menu bar
+        self.menubar = ui.get_widget('/MenuBar')
 
-        # Pane
-        pane = Gtk.VBox(False, 1)
-        pane.pack_start(menu_vbox, False, True, 0)
-        pane.pack_start(self.app_v_paned, True, True, 0)
+        # Set reference to UI manager and acclegroup
+        self.uimanager = ui
+        self.accel_group = accel_group
 
-        self.fblade_theme_fix_panels_darker.append(pane)
+        # Add recent projects to menu
+        self.fill_recents_menu_widget(ui.get_widget('/MenuBar/FileMenu/OpenRecent'), projectaction.open_recent_project)
 
-        # Tooltips
-        self._add_tool_tips()
+        # Disable audio mixer if not available
+        if editorstate.audio_monitoring_available == False:
+            ui.get_widget('/MenuBar/ToolsMenu/AudioMix').set_sensitive(False)
 
-        # GUI preferences
-        self._init_gui_to_prefs()
-
-        # Viewmenu initial state
-        self._init_view_menu(ui.get_widget('/MenuBar/ViewMenu'))
-
-        # Set pane and show window
-        self.window.add(pane)
-        self.window.set_title("Flowblade")
-
-        # Maximize if it seems that we exited maximized, else set size
-        w, h = editorpersistance.prefs.exit_allocation
-        if w != 0: # non-existing prefs file causes w and h to be 0
-            if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
-                self.window.maximize()
-            else:
-                self.window.resize(w, h)
-                self.window.set_position(Gtk.WindowPosition.CENTER)
-        else:
-            self.window.set_position(Gtk.WindowPosition.CENTER)
-
-        # Show window and all of its components
-        self.window.show_all()
-
-        # Show Monitor Window in two window mode
-        if editorpersistance.prefs.global_layout != appconsts.SINGLE_WINDOW:
-            pane2 = Gtk.VBox(False, 1)
-            pane2.pack_start(top_row_window_2, False, False, 0)
-            pane2.pack_start(monitor_frame, True, True, 0)
-
-            # Set pane and show window
-            self.window2.add(pane2)
-            self.window2.set_title("Flowblade")
-
-            # Maximize if it seems that we exited maximized, else set size
-            w, h, x, y = editorpersistance.prefs.exit_allocation_window_2
-
-            if w != 0: # non-existing prefs file causes w and h to be 0
-                if (float(w) / editorstate.SCREEN_WIDTH > 0.95) and (float(h) / editorstate.SCREEN_HEIGHT > 0.95):
-                    self.window2.maximize()
-                else:
-                    self.window2.resize(w, h)
-
-            self.window2.move(x, y)
-            self.window2.show_all()
-
-        # Set paned positions
-        bin_w = editorpersistance.prefs.mm_paned_position
-        if bin_w < MEDIA_MANAGER_WIDTH + 2:
-            bin_w = 0
-
-        if top_level_project_panel() == False:
-            self.mm_paned.set_position(bin_w)
-
-        self.top_paned.set_position(editorpersistance.prefs.top_paned_position)
-        self.app_v_paned.set_position(editorpersistance.prefs.app_v_paned_position)
+        # Diable Blender and G'Mic container clip menu items if not available.
+        if containerclip.blender_available() == False:
+            ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateBlenderContainerItem').set_sensitive(False)
+        if gmic.gmic_available() == False:
+            ui.get_widget('/MenuBar/ProjectMenu/ContainerClipsMenu/CreateGMicContainerItem').set_sensitive(False)
 
     def _init_view_menu(self, menu_item):
         menu = menu_item.get_submenu()
@@ -1028,16 +1056,28 @@ class EditorWindow:
 
         components_centered = Gtk.RadioMenuItem.new_with_label([tc_left], _("Components Centered"))
         components_centered.connect("activate", lambda w: middlebar._show_buttons_COMPONENTS_CENTERED_layout(w))
-
         mb_menu.append(components_centered)
+
+        tc_free = Gtk.RadioMenuItem.new_with_label([tc_left], _("Free Bar"))
+        tc_free.connect("activate", lambda w: middlebar._show_buttons_TC_FREE_layout(w))
+        mb_menu.append(tc_free)
 
         if editorpersistance.prefs.midbar_layout == appconsts.MIDBAR_COMPONENTS_CENTERED:
             components_centered.set_active(True)
         elif editorpersistance.prefs.midbar_layout == appconsts.MIDBAR_TC_LEFT:
             tc_left.set_active(True)
+        elif editorpersistance.prefs.midbar_layout == appconsts.MIDBAR_TC_FREE:
+            tc_free.set_active(True)
         else:
             tc_middle.set_active(True)
 
+        sep = Gtk.SeparatorMenuItem()
+        menu.append(sep)
+
+        freebar_conf = Gtk.MenuItem(_("Configure Free Bar..."))
+        freebar_conf.connect("activate", lambda w: middlebar.show_freebar_conf_dialog())
+        mb_menu.append(freebar_conf)
+        
         mb_menu_item.set_submenu(mb_menu)
         menu.append(mb_menu_item)
 
@@ -1060,6 +1100,27 @@ class EditorWindow:
         tabs_menu_item.set_submenu(tabs_menu)
         menu.append(tabs_menu_item)
 
+        tool_selector_menu_item = Gtk.MenuItem(_("Tool Selection Widget"))
+        tool_selector_menu =  Gtk.Menu()
+        tools_middlebar = Gtk.RadioMenuItem()
+        tools_middlebar.set_label( _("Middlebar Menu"))
+
+        tool_selector_menu.append(tools_middlebar)
+        
+        tools_dock = Gtk.RadioMenuItem.new_with_label([tools_middlebar], _("Dock"))
+
+        if editorpersistance.prefs.tools_selection == appconsts.TOOL_SELECTOR_IS_MENU:
+            tools_middlebar.set_active(True)
+        else:
+            tools_dock.set_active(True)
+
+        tools_middlebar.connect("activate", lambda w: self._show_tools_middlebar(w))
+        tools_dock.connect("activate", lambda w: self._show_tools_dock(w))
+        
+        tool_selector_menu.append(tools_dock)
+        tool_selector_menu_item.set_submenu(tool_selector_menu)
+        menu.append(tool_selector_menu_item)
+        
         sep = Gtk.SeparatorMenuItem()
         menu.append(sep)
 
@@ -1113,10 +1174,6 @@ class EditorWindow:
         comp_top_free.show()
         menu.append(comp_top_free)
 
-        comp_top_auto = Gtk.RadioMenuItem.new_with_label([comp_top_free],_("Top Down Auto Follow"))
-        comp_top_auto.show()
-        menu.append(comp_top_auto)
-
         comp_standard_auto = Gtk.RadioMenuItem.new_with_label([comp_top_free],_("Standard Auto Follow"))
         comp_standard_auto.show()
         menu.append(comp_standard_auto)
@@ -1125,11 +1182,16 @@ class EditorWindow:
         comp_standard_full.show()
         menu.append(comp_standard_full)
 
-        menu_items = [comp_top_free, comp_top_auto, comp_standard_auto, comp_standard_full]
-        menu_items[editorstate.get_compositing_mode()].set_active(True)
+        menu_items = [comp_top_free, comp_standard_auto, comp_standard_full]
+        comp_mode = editorstate.get_compositing_mode()
+        
+        # We dropped compositing mode COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW so compositing mode values no longer
+        # correspond to menu indexes.
+        comp_mode_to_menu_index = {0:0, 1:0, 2:1, 3:2}
+        menu_index = comp_mode_to_menu_index[editorstate.get_compositing_mode()]
+        menu_items[menu_index].set_active(True)
 
         comp_top_free.connect("toggled", lambda w: projectaction.change_current_sequence_compositing_mode(w, appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE))
-        comp_top_auto.connect("toggled", lambda w: projectaction.change_current_sequence_compositing_mode(w, appconsts.COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW))
         comp_standard_auto.connect("toggled", lambda w: projectaction.change_current_sequence_compositing_mode(w, appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW))
         comp_standard_full.connect("toggled", lambda w: projectaction.change_current_sequence_compositing_mode(w, appconsts.COMPOSITING_MODE_STANDARD_FULL_TRACK))
 
@@ -1231,17 +1293,44 @@ class EditorWindow:
         editorpersistance.prefs.tabs_on_top = False
         editorpersistance.save()
 
-    def _show_vu_meter(self, widget):
-        editorpersistance.prefs.show_vu_meter = widget.get_active()
-        editorpersistance.save()
-
-        self._update_top_row(True)
-
     def _update_top_row(self, show_all=False):
         self.top_row_hbox.pack_end(audiomonitoring.get_master_meter(), False, False, 0)
 
         if show_all:
             self.window.show_all()
+
+    def _show_tools_middlebar(self, widget):
+        if widget.get_active() == False:
+            return
+        editorpersistance.prefs.tools_selection = appconsts.TOOL_SELECTOR_IS_MENU
+        editorpersistance.save()
+
+        if self.tool_dock != None:
+            self.tline_box.remove(self.tool_dock)
+
+        middlebar.re_create_tool_selector(self)
+        middlebar.do_layout_after_dock_change(self)
+        workflow.select_default_tool()
+        
+    def _show_tools_dock(self, widget):
+        if widget.get_active() == False:
+            return
+
+        editorpersistance.prefs.tools_selection = appconsts.TOOL_SELECTOR_IS_LEFT_DOCK
+        editorpersistance.save()
+
+        if self.tool_dock != None:
+            self.tline_box.remove(self.tool_dock)
+
+        self.tool_dock = workflow.get_tline_tool_dock()
+        self.tool_dock.show_all()
+
+        if editorpersistance.prefs.tools_selection == appconsts.TOOL_SELECTOR_IS_LEFT_DOCK:
+            self.tline_box.pack_start(self.tool_dock, False, False, 0)
+
+        middlebar.do_layout_after_dock_change(self)
+        self.tool_selector = None
+        workflow.select_default_tool()
 
     def _create_monitor_buttons(self):
         self.monitor_switch = guicomponents.MonitorSwitch(self._monitor_switch_handler)
@@ -1318,6 +1407,10 @@ class EditorWindow:
             middlebar.fill_with_COMPONENTS_CENTERED_pattern(buttons_row, self)
         elif editorpersistance.prefs.midbar_layout == appconsts.MIDBAR_TC_LEFT:
             middlebar.fill_with_TC_LEFT_pattern(buttons_row, self)
+# -----------------------Toolbar preferences panel for free elements and order
+        elif editorpersistance.prefs.midbar_layout == appconsts.MIDBAR_TC_FREE:
+            middlebar.fill_with_TC_FREE_pattern(buttons_row, self)
+# ------------------------End of Toolbar preferences panel for free elements and order
         else:
             middlebar.fill_with_TC_MIDDLE_pattern(buttons_row, self)
 
@@ -1462,7 +1555,7 @@ class EditorWindow:
         updater.set_trim_mode_gui()
 
     def mode_selector_pressed(self, selector, event):
-        workflow.get_tline_tool_popup_menu(selector, event, self.tool_selector_item_activated)
+        workflow.get_tline_tool_popup_menu(event, self.tool_selector_item_activated)
 
     def tool_selector_item_activated(self, selector, tool):
         if tool == appconsts.TLINE_TOOL_INSERT:
@@ -1563,6 +1656,9 @@ class EditorWindow:
         gdk_window.set_cursor(cursor)
 
     def set_tool_selector_to_mode(self):
+        if self.tool_selector == None:
+            return # We are using dock
+
         if editorstate.EDIT_MODE() == editorstate.INSERT_MOVE:
             self.tool_selector.set_tool_pixbuf(appconsts.TLINE_TOOL_INSERT)
         elif editorstate.EDIT_MODE() == editorstate.OVERWRITE_MOVE:

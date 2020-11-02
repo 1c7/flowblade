@@ -29,6 +29,7 @@ import pickle
 import threading
 import time
 
+import appconsts
 import atomicfile
 import dialogs
 import dialogutils
@@ -384,7 +385,8 @@ def get_filter_add_action(filter_info, target_clip):
     return action
 
 def _alpha_filter_add_maybe_info(filter_info):
-    if editorpersistance.prefs.show_alpha_info_message == True:
+    if editorpersistance.prefs.show_alpha_info_message == True and \
+       editorstate. current_sequence().compositing_mode != appconsts.COMPOSITING_MODE_STANDARD_FULL_TRACK:
         dialogs.alpha_info_msg(_alpha_info_dialog_cb, translations.get_filter_name(filter_info.name))
 
 def _alpha_info_dialog_cb(dialog, response_id, dont_show_check):
@@ -614,10 +616,11 @@ def effect_selection_changed(use_current_filter_index=False):
             if ((editor_type == propertyeditorbuilder.KEYFRAME_EDITOR)
                 or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_RELEASE)
                 or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)
-                or (editor_type == propertyeditorbuilder.FILTER_RECT_GEOM_EDITOR)):
+                or (editor_type == propertyeditorbuilder.FILTER_RECT_GEOM_EDITOR)
+                or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP_FADE_FILTER)):
                     keyframe_editor_widgets.append(editor_row)
             
-            # if slider property is being dedited as keyrame property
+            # if slider property is being edited as keyrame property
             if hasattr(editor_row, "is_kf_editor"):
                 keyframe_editor_widgets.append(editor_row)
 
@@ -632,7 +635,7 @@ def effect_selection_changed(use_current_filter_index=False):
 
         # Extra editors. Editable properties may have already been created 
         # with "editor=no_editor" and now extra editors may be created to edit those
-        # Non mlt properties are added as these are only need with extraeditors
+        # Non mlt properties are added as these are only needed with extraeditors
         editable_properties.extend(non_mlteditable_properties)
         editor_rows = propertyeditorbuilder.get_filter_extra_editor_rows(filter_object, editable_properties)
         for editor_row in editor_rows:
@@ -789,6 +792,8 @@ def _clip_hamburger_item_activated(widget, msg):
         _reset_filter_values()
     elif msg == "delete":
         _delete_effect()
+    elif msg == "fade_length":
+        dialogs.set_fade_length_default_dialog(_set_fade_length_dialog_callback, PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH))
     elif msg == "close":
         clear_clip()
         
@@ -835,8 +840,13 @@ def _reset_filter_values():
 def _delete_effect():
     delete_effect_pressed()
 
-
-
+def _set_fade_length_dialog_callback(dialog, response_id, spin):
+    if response_id == Gtk.ResponseType.ACCEPT:
+        default_length = int(spin.get_value())
+        PROJECT().set_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH, default_length)
+        
+    dialog.destroy()
+    
 class PropertyChangePollingThread(threading.Thread):
     
     def __init__(self):

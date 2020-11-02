@@ -463,10 +463,19 @@ def _attempt_clip_cover_delete(clip, track, index):
         cover_form_clip = track.clips[movemodes.selected_range_in - 1]
         cover_to_clip = track.clips[movemodes.selected_range_in + 1]
         
-        real_length = clip.get_length()
+        real_length = clip.get_length() # this the mlt finction giving media length, not length on timeline
+
         to_part = real_length // 2
         from_part = real_length - to_part
-    
+
+        # Fix lengths to match what existed before adding rendered transition
+        clip_marks_length = clip.clip_out - clip.clip_in
+        if clip_marks_length % 2 == 1:
+            to_part += -1
+        else:
+            from_part += 1
+            to_part += -1
+
         if to_part > cover_to_clip.clip_in:
             return False
         if from_part > cover_form_clip.get_length() - cover_form_clip.clip_out - 1:# -1, clip_out inclusive
@@ -939,7 +948,7 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
 
     # Get values to build transition render sequence
     # Divide transition lenght between clips, odd frame goes to from_clip 
-    real_length = length + 1 # first frame is 100% from clip frame so we are going to have to drop that
+    real_length = length + 1 # first frame is 100% a from_clip frame so we are going to have to drop that
     to_part = real_length // 2
     from_part = real_length - to_part
 
@@ -1044,7 +1053,7 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
                                                 
     # Save transition data into global variable to be available at render complete callback
     global transition_render_data
-    transition_render_data = (trans_index, from_clip, to_clip, transition_data["track"], from_in, to_out, transition_type_selection_index, creation_data)
+    transition_render_data = (trans_index, from_clip, to_clip, transition_data["track"], from_in, to_out, transition_type_selection_index, creation_data, add_thingy)
     window_text, type_id = mlttransitions.rendered_transitions[transition_type_selection_index]
     window_text = _("Rendering ") + window_text
 
@@ -1059,7 +1068,7 @@ def _transition_render_complete(clip_path):
     print("Render complete")
 
     global transition_render_data
-    transition_index, from_clip, to_clip, track, from_in, to_out, transition_type, creation_data = transition_render_data
+    transition_index, from_clip, to_clip, track, from_in, to_out, transition_type, creation_data, length_fix = transition_render_data
 
     transition_clip = current_sequence().create_rendered_transition_clip(clip_path, transition_type)
     transition_clip.creation_data = creation_data
@@ -1070,7 +1079,8 @@ def _transition_render_complete(clip_path):
             "to_clip":to_clip,
             "track":track,
             "from_in":from_in,
-            "to_out":to_out}
+            "to_out":to_out,
+            "length_fix":length_fix}
 
     action = edit.add_centered_transition_action(data)
     action.do_edit()

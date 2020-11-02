@@ -108,9 +108,16 @@ def titler_destroy():
         _titler_data = None
 
 def reset_titler():
-    global _titler_data
-    _titler_data = None
+    global _titler, _keep_titler_data, _titler_data
 
+    if _titler != None:
+        temp_keep_val = _keep_titler_data
+        _keep_titler_data = True
+        titler_destroy()
+        _keep_titler_data = temp_keep_val
+        show_titler()
+    else:
+        _titler_data = None
 
 # ------------------------------------------------------------- data
 class TextLayer:
@@ -574,7 +581,11 @@ class Titler(Gtk.Window):
             text_layer.mouse_released_listener  = self._editor_layer_mouse_released
             text_layer.set_rect_pos(layer.x, layer.y)
             text_layer.update_rect = True
+            text_layer.visible = True
             self.view_editor.add_layer(text_layer)
+
+        for layer in _titler_data.layers:
+            layer.visible = True
 
         self._activate_layer(0)
         self.layer_list.fill_data_model()

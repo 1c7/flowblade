@@ -43,7 +43,7 @@ import modesetting
 import respaths
 import updater
 
-
+# New version start-up toolset selections.
 STANDARD_PRESET = 0
 FILM_STYLE_PRESET = 1
 KEEP_EXISTING = 2
@@ -59,6 +59,9 @@ _PREFS_TOOL_TIPS = None
 
 _tools_menu = Gtk.Menu()
 _workflow_menu = Gtk.Menu()
+
+# Tool items in dock if used.
+dock_items = None
 
 def init_data():
     global _TOOLS_DATA, _TOOL_TIPS, _PREFS_TOOL_TIPS
@@ -108,9 +111,21 @@ def _set_workflow_FILM_STYLE():
 
     modesetting.set_default_edit_mode()
 
+# --------------------------------------------------------------- interface
+def get_tline_tool_working_set():
+    tools = []
+    
+    kb_shortcut_number = 1
+    for tool_id in editorpersistance.prefs.active_tools:
+        tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
+        tools.append((tool_name, kb_shortcut_number))
 
+        kb_shortcut_number = kb_shortcut_number + 1
+
+    return tools
+    
 # --------------------------------------------------------------- tools menu
-def get_tline_tool_popup_menu(launcher, event, callback):
+def get_tline_tool_popup_menu(event, callback):
     menu = _tools_menu
     guiutils.remove_children(menu)
 
@@ -133,20 +148,8 @@ def get_tline_tool_popup_menu(launcher, event, callback):
     menu.show_all()
     menu.popup(None, None, None, None, event.button, event.time)
 
-def get_tline_tool_working_set():
-    tools = []
-    
-    kb_shortcut_number = 1
-    for tool_id in editorpersistance.prefs.active_tools:
-        tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
-        tools.append((tool_name, kb_shortcut_number))
-
-        kb_shortcut_number = kb_shortcut_number + 1
-
-    return tools
-    
 def _tools_menu_hidden(tools_menu, menu_items):
-    # needed to make number 1-6 work elsewhere in the application
+    # needed to make number 1-9 work elsewhere in the application
     for menu_item in menu_items:
         menu_item.set_accel_path(None)
 
@@ -163,7 +166,6 @@ def _get_image_menu_item(tool_icon_file, text, callback, tool_id):
         item.set_tooltip_markup(_get_tooltip_text(tool_id))
     item.show()
     return item
-    
     
 # ---------------------------------------------------- workflow menu
 def workflow_menu_launched(widget, event):
@@ -207,7 +209,7 @@ def workflow_menu_launched(widget, event):
 
     dnd_item = Gtk.MenuItem.new_with_label(_("Drag'n'Drop Action"))
     dnd_item.show()
-    
+
     dnd_menu = Gtk.Menu()
     labels = [_("Always Overwrite Blanks"), _("Overwrite Blanks on non-V1 Tracks"), _("Always Insert")]
     msgs = ["always overwrite", "overwrite nonV1", "always insert"]
@@ -221,8 +223,8 @@ def workflow_menu_launched(widget, event):
     default_compositing_item.show()
     
     default_compositing_menu = Gtk.Menu()
-    labels = [_("Top Down Free Move"), _("Top Down Auto Follow"), _("Standard Auto Follow"),  _("Standard Full Track")]
-    msgs = ["top down", "top down auto", "standard auto", "full_track_auto"]
+    labels = [_("Top Down Free Move"), _("Top Down Auto Follow"), _("Standard Full Track")]
+    msgs = ["top down", "standard auto", "full_track_auto"]
     active_index = editorpersistance.prefs.default_compositing_mode  # appconsts values correspond with order here.
     _build_radio_menu_items_group(default_compositing_menu, labels, msgs, _workflow_menu_callback, active_index)
 
@@ -249,7 +251,7 @@ def workflow_menu_launched(widget, event):
         tool_id = editorpersistance.prefs.active_tools[i]
         tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
         _workflow_menu.add(_get_workflow_tool_menu_item(_workflow_menu_callback, tool_id, tool_name, tool_icon_file, i+1))
-        try: # needed to prevent crashes when manually changing preset tools during dev
+        try: # needed to prevent crashes when manually changing preset tools during development.
             non_active_tools.remove(tool_id)
         except:
             pass
@@ -377,10 +379,10 @@ def _workflow_menu_callback(widget, data):
         editorpersistance.prefs.show_tool_tooltips = widget.get_active()
     elif  msg == "top down":
         editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
-    elif  msg == "top down auto":
-        editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW
     elif  msg == "standard auto":
         editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW
+    elif  msg == "standard full":
+        editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_STANDARD_FULL_TRACK
     elif msg == "delete lift" and widget.get_active() == True:
         print("lift")
     elif msg == "delete splice" and widget.get_active() == True:
@@ -396,6 +398,68 @@ def _workflow_menu_callback(widget, data):
     
     editorpersistance.save()
 
+# ---------------------------------------------------- tools dock
+def get_tline_tool_dock():
+    dock = Gtk.VBox()
+    global dock_items
+    dock_items = []
+    kb_shortcut_number = 1
+    for tool_id in editorpersistance.prefs.active_tools:
+        tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
+
+        dock_item = _get_tool_dock_item(kb_shortcut_number, tool_icon_file, tool_name, tool_id)
+        dock.pack_start(dock_item.widget, False, False, 0)
+        dock_items.append(dock_item)
+        if kb_shortcut_number == 1:
+            dock_item.set_item_color(True)
+        kb_shortcut_number = kb_shortcut_number + 1
+
+    dock.pack_start(Gtk.Label(), True, True, 0)
+
+    align = guiutils.set_margins(dock, 10, 0, 0, 0)
+
+    frame = Gtk.Frame()
+    frame.add(align)
+    frame.set_shadow_type(Gtk.ShadowType.ETCHED_OUT)
+    guiutils.set_margins(frame, 0, 0, 1, 0)
+    return frame
+
+def _get_tool_dock_item(kb_shortcut_number, tool_icon_file, tool_name, tool_id):
+    dock_item = ToolDockItem(kb_shortcut_number, tool_icon_file, tool_name, tool_id)
+    return dock_item
+
+def _tool_dock_item_press(tool_id, tool_dock_item):
+    for item in dock_items:
+        item.set_item_color(False)
+    tool_dock_item.set_item_color(True)
+    gui.editor_window.tool_selector_item_activated(None, tool_id)
+    
+
+class ToolDockItem:
+    def __init__(self, kb_shortcut_number, tool_icon_file, tool_name, tool_id):
+        tool_img = Gtk.Image.new_from_file(respaths.IMAGE_PATH + tool_icon_file)
+        guiutils.set_margins(tool_img, 5, 5, 9, 7)
+
+        self.widget = Gtk.EventBox()
+        self.widget.connect("button-press-event", lambda w,e: _tool_dock_item_press(tool_id, self))
+
+        self.widget.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        if editorpersistance.prefs.show_tool_tooltips:
+            self.widget.set_tooltip_markup("<b>" + tool_name + " - " + _("Keyboard shortcut: ") + str(kb_shortcut_number) + "</b>" "\n\n" + _get_tooltip_text(tool_id))
+        
+        self.widget.add(tool_img)
+        #self.set_item_color(True)
+
+    def set_item_color(self, selected):
+        if selected == True:
+            self.widget.override_background_color(Gtk.StateType.NORMAL, SELECTED_BG)
+            if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
+                self.widget.override_color(Gtk.StateType.NORMAL, WHITE_TEXT)
+        else:
+            self.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_bg_color())
+            if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
+                self.widget.override_color(Gtk.StateType.NORMAL, DARK_TEXT)
+
 
 # ------------------------------------------------------------- keyboard shortcuts
 def tline_tool_keyboard_selected(event):
@@ -404,14 +468,20 @@ def tline_tool_keyboard_selected(event):
         keyboard_number = int(Gdk.keyval_name(event.keyval).lower())
         tool_id = editorpersistance.prefs.active_tools[keyboard_number - 1]
         gui.editor_window.change_tool(tool_id)
+        for item in dock_items:
+            item.set_item_color(False)
+        dock_items[keyboard_number - 1].set_item_color(True)
         return True
     except:
-        # This fails if not a valid number was pressed, so probably most times.
+        # This fails if a valid number was not pressed, so probably most times.
         pass
         
     return False
 
-
+def select_default_tool():
+    tool_id = editorpersistance.prefs.active_tools[0]
+    gui.editor_window.change_tool(tool_id)
+        
 # -------------------------------------------------------------- tool prefs
 def _TLINE_TOOL_OVERWRITE_box_selection_pref(check_menu_item):
     editorpersistance.prefs.box_for_empty_press_in_overwrite_tool = check_menu_item.get_active()
@@ -428,12 +498,12 @@ class WorkflowDialog(Gtk.Dialog):
 
         self.selection = STANDARD_PRESET 
         
-        info_label_text_1 = _("<b>Welcome to Flowblade 2.4</b>")
+        info_label_text_1 = _("<b>Welcome to Flowblade</b>")
         info_label_1 = Gtk.Label(info_label_text_1)
         info_label_1.set_use_markup(True)
 
 
-        info_label_text_2 = _("<b>Flowblade 2.4</b> comes with a configurable workflow.")
+        info_label_text_2 = _("<b>Flowblade</b> comes with a configurable workflow.")
         info_label_2 = Gtk.Label(info_label_text_2)
         info_label_2.set_use_markup(True)
 
@@ -470,7 +540,7 @@ class WorkflowDialog(Gtk.Dialog):
         filmstyle_preset_workflow_text_2 = _("Film Style workflow has the <b>Insert</b> tool as default tool\nand employs insert style editing.\nThis was the workflow in previous versions of the application.")
         workflow_select_item_2 = self.get_workflow_select_item(FILM_STYLE_PRESET, workflow_name, filmstyle_preset_workflow_text_2)
 
-        workflow_name = _("<b>Keep Existing Worflow</b>")
+        workflow_name = _("<b>Keep Existing Workflow</b>")
         keep_workflow_text_2 = _("Select this if you have installed new version and wish to keep your existing workflow.")
         workflow_select_item_3 = self.get_workflow_select_item(KEEP_EXISTING, workflow_name, keep_workflow_text_2)
         

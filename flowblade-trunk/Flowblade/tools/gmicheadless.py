@@ -86,7 +86,6 @@ def get_session_status(session_id):
     msg = ccrutils.get_session_status_message(session_id)
     if msg == None:
         return None
-        
     step, frame, length, elapsed = msg.split(" ")
     return (step, frame, length, elapsed)
     
@@ -98,7 +97,7 @@ def abort_render(session_id):
 def main(root_path, session_id, script, clip_path, range_in, range_out, profile_desc, gmic_frame_offset):
     
     os.nice(10) # make user configurable
-     
+
     try:
         editorstate.mlt_version = mlt.LIBMLT_VERSION
     except:
@@ -203,12 +202,12 @@ class GMicHeadlessRunnerThread(threading.Thread):
 
         profile = mltprofiles.get_profile(self.profile_desc)
 
-        # Delete old frames
+        # Delete old clip frames
         for frame_file in os.listdir(clip_frames_folder):
             file_path = os.path.join(clip_frames_folder, frame_file)
             os.remove(file_path)
 
-        # Delete old frames
+        # Delete old rendered frames
         for frame_file in os.listdir(rendered_frames_folder):
             file_path = os.path.join(rendered_frames_folder, frame_file)
             os.remove(file_path)
@@ -257,10 +256,8 @@ class GMicHeadlessRunnerThread(threading.Thread):
             
             # Render producer
             frame_file = rendered_frames_folder + "/" + frame_name + "_0000.png"
-            if editorstate.mlt_version_is_equal_or_greater("0.8.5"):
-                resource_name_str = utils.get_img_seq_resource_name(frame_file, True)
-            else:
-                resource_name_str = utils.get_img_seq_resource_name(frame_file, False)
+            resource_name_str = utils.get_img_seq_resource_name(frame_file, True)
+
             resource_path = rendered_frames_folder + "/" + resource_name_str
             producer = mlt.Producer(profile, str(resource_path))
 

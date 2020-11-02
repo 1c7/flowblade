@@ -82,7 +82,7 @@ sequence_editor_b = None
 
 # Theme colors
 # Theme colors are given as 4 RGB tuples and string, ((LIGHT_BG), (DARK_BG), (SELECTED_BG), (DARK_SELECTED_BG), name)
-_UBUNTU_COLORS = ((0.949020, 0.945098, 0.941176),  (0.172, 0.172, 0.172), (0.941, 0.466, 0.274, 0.9), (0.941, 0.466, 0.274, 0.9), "Ubuntu")
+_UBUNTU_COLORS = ((0.949020, 0.945098, 0.941176), (0.172, 0.172, 0.172), (0.941, 0.466, 0.274, 0.9), (0.941, 0.466, 0.274, 0.9), "Ubuntu")
 _GNOME_COLORS = ((0.929412, 0.929412, 0.929412), (0.172, 0.172, 0.172), (0.28627451, 0.560784314, 0.843137255), (0.192, 0.361, 0.608), "Gnome")
 _MINT_COLORS = ((0.839215686, 0.839215686, 0.839215686), (0.172, 0.172, 0.172), (0.556862745, 0.678431373, 0.439215686), (0.556862745, 0.678431373, 0.439215686), "Linux Mint")
 _ARC_COLORS = ((0.960784, 0.964706, 0.968627), (0.266667, 0.282353, 0.321569), (0.321568627, 0.580392157, 0.88627451), (0.321568627, 0.580392157, 0.88627451), "Arc (theme)")
@@ -207,15 +207,6 @@ def set_theme_colors():
     editor_window.tline_pane.override_background_color(Gtk.StateFlags.NORMAL, get_bg_color())
     editor_window.media_panel.override_background_color(Gtk.StateFlags.NORMAL, get_bg_color())
     editor_window.mm_paned.override_background_color(Gtk.StateFlags.NORMAL, get_bg_color())
-
-def apply_flowblade_theme_fixes():
-    fblade_bg_color = Gdk.RGBA(red=(30.0/255.0), green=(35.0/255.0), blue=(51.0/255.0), alpha=1.0)
-    fblade_bg_color_darker = Gdk.RGBA(red=(16.0/255.0), green=(19.0/255.0), blue=(30.0/255.0), alpha=1.0)
-    test_color =  Gdk.RGBA(1, 0, 0, alpha=1.0)
-    for widget in editor_window.fblade_theme_fix_panels:
-        widget.override_background_color(Gtk.StateFlags.NORMAL, fblade_bg_color)
-    for widget in editor_window.fblade_theme_fix_panels_darker:
-        widget.override_background_color(Gtk.StateFlags.NORMAL, fblade_bg_color_darker)
         
 def unpack_gdk_color(gdk_color):
     return (gdk_color.red, gdk_color.green, gdk_color.blue, gdk_color.alpha)

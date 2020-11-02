@@ -53,6 +53,7 @@ import audiowaveformrenderer
 import clipeffectseditor
 import clipmenuaction
 import compositeeditor
+import containerclip
 import containeractions
 import dialogs
 import dialogutils
@@ -169,6 +170,12 @@ def main(root_path):
 
     # Create user folders if needed and determine if we're using xdg or dotfile user folders.
     userfolders.init()
+    
+    # Flatpak still needs to use standard home XDG cache folder for Blender.
+    # Flatpak only uses XDG cache folder for Blender and we are keeping this around if we ever
+    # succeed in getting Blender going for Flatpak.
+    if editorstate.app_running_from == editorstate.RUNNING_FROM_FLATPAK:
+        userfolders.init_user_cache_for_flatpak()
 
     # Set paths.
     respaths.set_paths(root_path)
@@ -199,7 +206,7 @@ def main(root_path):
         print("Initializing Auto Save Options")
         editorpersistance.prefs.AUTO_SAVE_OPTS = ((0, _("No Autosave")),(1, _("1 min")),(2, _("2 min")),(5, _("5 min")))
 
-    # We respaths and translations data available so we need to init in a function.
+    # We need respaths and translations data available so we need to do init in a function.
     workflow.init_data()
 
     # RHEL7/CentOS compatibility fix
@@ -209,6 +216,16 @@ def main(root_path):
     # Init gtk threads
     Gdk.threads_init()
     Gdk.threads_enter()
+
+    # Handle userfolders init error and quit.
+    if userfolders.get_init_error() != None:
+        _xdg_error_exit(userfolders.get_init_error())
+        return
+
+    # After moving to Python 3 we need at least MLT 6.18
+    if editorstate.mlt_version_is_greater_correct("6.17.99") == False:
+        _too_low_mlt_version_exit()
+        return
 
     # Themes
     if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
@@ -277,6 +294,7 @@ def main(root_path):
 
     # Check for tools and init tools integration.
     gmic.test_availablity()
+    containerclip.test_blender_availebility()
     toolsintegration.init()
 
     # Create player object.
@@ -340,9 +358,6 @@ def main(root_path):
             global assoc_timeout_id
             assoc_timeout_id = GObject.timeout_add(10, open_assoc_file)
         
-    if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
-        gui.apply_flowblade_theme_fixes()
-        
     # SDL 2 consumer needs to created after Gtk.main() has run enough for window to be visble
     #if editorstate.get_sdl_version() == editorstate.SDL_2: # needs more state considerion still
     #    print "SDL2 timeout launch"
@@ -356,17 +371,15 @@ def main(root_path):
     if editorstate.runtime_version_greater_then_test_version(editorpersistance.prefs.workflow_dialog_last_version_shown, editorstate.appversion):
         GObject.timeout_add(500, show_worflow_info_dialog)
         
-    # Handle userfolders init error and data copy.
-    if userfolders.get_init_error() != None:
-        GObject.timeout_add(500, show_user_folders_init_error_dialog, userfolders.get_init_error())
-    elif userfolders.data_copy_needed():
+    # Copy to XDG.
+    if userfolders.data_copy_needed():
         GObject.timeout_add(500, show_user_folders_copy_dialog)
     else:
         print("No user folders actions needed.")
 
     global disk_cache_timeout_id
     disk_cache_timeout_id = GObject.timeout_add(2500, check_disk_cache_size)
-    
+
     # Launch gtk+ main loop
     Gtk.main()
 
@@ -378,6 +391,7 @@ def monkeypatch_callbacks():
     # We need to do this on app start-up or
     # we'll get circular imports with projectaction->mltplayer->render->projectaction
     render.open_media_file_callback = projectaction.open_rendered_file
+    jobs.open_media_file_callback = projectaction.open_rendered_file
 
     # Set callback for undo/redo ops, batcherrender app does not need this 
     undo.set_post_undo_redo_callback(modesetting.set_post_undo_redo_edit_mode)
@@ -443,7 +457,7 @@ def get_assoc_file_path():
         return arg_str
 
 def open_assoc_file():
-    GObject.source_remove(assoc_timeout_id)
+    GLib.source_remove(assoc_timeout_id)
     projectaction.actually_load_project(assoc_file_path, block_recent_files=False)
 
 def set_quiet_if_requested():
@@ -469,6 +483,11 @@ def create_gui():
         compositeeditor.compositor_notebook_index = 2
         clipeffectseditor.filters_notebook_index = 1
         jobs.jobs_notebook_index = 3
+        if editorwindow.top_level_project_panel() == False:
+            jobs.jobs_notebook_index = 4
+    else:
+        if editorwindow.top_level_project_panel() == False:
+            jobs.jobs_notebook_index = 5
 
     # Create window and all child components
     editor_window = editorwindow.EditorWindow()
@@ -560,12 +579,14 @@ def init_sequence_gui():
     # Set correct compositing mode menu item selected
     gui.editor_window.init_compositing_mode_menu()
     gui.editor_window.init_timeline_rendering_menu()
+    gui.editor_window.tline_render_mode_launcher.set_pixbuf(editorstate.tline_render_mode) 
+    gui.comp_mode_launcher.set_pixbuf(editorstate.get_compositing_mode())
 
     # Set initial timeline scale draw params
     editorstate.current_sequence().update_length()
     
     # Handle timeline rendering GUI and data
-    tlinerender.init_for_sequence(editorstate.current_sequence())
+    tlinerender.init_for_sequence()
     gui.editor_window.hide_tline_render_strip()
     if editorstate.get_tline_rendering_mode() != appconsts.TLINE_RENDERING_OFF: 
         gui.editor_window.show_tline_render_strip()
@@ -636,7 +657,8 @@ def open_project(new_project):
 
     editorstate.project = new_project
     editorstate.media_view_filter = appconsts.SHOW_ALL_FILES
-
+    editorstate.tline_render_mode = appconsts.TLINE_RENDERING_OFF
+    
     # Inits widgets with project data
     init_project_gui()
     
@@ -688,7 +710,7 @@ def open_project(new_project):
     editorstate.player.set_scrubbing(editorpersistance.prefs.audio_scrubbing)
     
 def _do_window_resized_update():
-    GObject.source_remove(resize_timeout_id)
+    GLib.source_remove(resize_timeout_id)
     updater.window_resized()
     
 def change_current_sequence(index):
@@ -696,6 +718,8 @@ def change_current_sequence(index):
     
     stop_autosave()
     editorstate.project.c_seq = editorstate.project.sequences[index]
+
+    editorstate.tline_render_mode = appconsts.TLINE_RENDERING_OFF
 
     # Inits widgets with current sequence data
     init_sequence_gui()
@@ -745,7 +769,7 @@ def autosave_dialog_callback(dialog, response):
     if response == Gtk.ResponseType.OK:
         global loaded_autosave_file
         loaded_autosave_file = autosave_file
-        projectaction.actually_load_project(autosave_file, True)
+        projectaction.actually_load_project(autosave_file, True, False, True)
     else:
         tlinerender.init_session()  # didn't do this in main and not going to do app-open_project
         os.remove(autosave_file)
@@ -773,7 +797,7 @@ def autosaves_many_dialog_callback(dialog, response, autosaves_view, autosaves):
         global loaded_autosave_file
         loaded_autosave_file = autosave_file
         dialog.destroy()
-        projectaction.actually_load_project(autosave_file, True)
+        projectaction.actually_load_project(autosave_file, True, False, True)
     else:
         dialog.destroy()
         tlinerender.init_session()
@@ -815,7 +839,7 @@ def stop_autosave():
     global autosave_timeout_id
     if autosave_timeout_id == -1:
         return
-    GObject.source_remove(autosave_timeout_id)
+    GLib.source_remove(autosave_timeout_id)
     autosave_timeout_id = -1
 
 def do_autosave():
@@ -843,7 +867,7 @@ def show_splash_screen():
 
 def destroy_splash_screen():
     splash_screen.destroy()
-    GObject.source_remove(splash_timeout_id)
+    GLib.source_remove(splash_timeout_id)
 
 def show_worflow_info_dialog():
     editorpersistance.prefs.workflow_dialog_last_version_shown = editorstate.appversion
@@ -854,7 +878,7 @@ def show_worflow_info_dialog():
 
 # ------------------------------------------------------- disk cahce size check
 def check_disk_cache_size():
-    GObject.source_remove(disk_cache_timeout_id)
+    GLib.source_remove(disk_cache_timeout_id)
     diskcachemanagement.check_disk_cache_size()
     
 # ------------------------------------------------------- userfolders dialogs
@@ -948,12 +972,35 @@ def _too_small_screen_exit():
     Gtk.main()
 
 def _show_too_small_info():
-    GObject.source_remove(exit_timeout_id)
+    GLib.source_remove(exit_timeout_id)
     primary_txt = _("Too small screen for this application.")
     scr_w = Gdk.Screen.width()
     scr_h = Gdk.Screen.height()
     secondary_txt = _("Minimum screen dimensions for this application are 1152 x 768.\n") + \
                     _("Your screen dimensions are ") + str(scr_w) + " x " + str(scr_h) + "."
+    dialogutils.warning_message_with_callback(primary_txt, secondary_txt, None, False, _early_exit)
+
+def _xdg_error_exit(error_str):
+    global exit_timeout_id
+    exit_timeout_id = GObject.timeout_add(200, _show_xdg_error_info, error_str)
+    # Launch gtk+ main loop
+    Gtk.main()
+
+def _show_xdg_error_info(error_str):
+    GLib.source_remove(exit_timeout_id)
+    primary_txt = _("Cannot launch application because XDG folders init error.")
+    secondary_txt = error_str + "."
+    dialogutils.warning_message_with_callback(primary_txt, secondary_txt, None, False, _early_exit)
+
+def _too_low_mlt_version_exit():
+    global exit_timeout_id
+    exit_timeout_id = GObject.timeout_add(200, _show_mlt_version_exit_info)
+    # Launch gtk+ main loop
+    Gtk.main()
+
+def _show_mlt_version_exit_info():
+    primary_txt = _("Flowblade version 2.6 (or later) requires MLT version 6.18 to run")
+    secondary_txt = _("Your MLT version is: ") + editorstate.mlt_version + ".\n\n" + _("Install MLT 6.18 or higher to run Flowblade.")
     dialogutils.warning_message_with_callback(primary_txt, secondary_txt, None, False, _early_exit)
 
 def _early_exit(dialog, response):
@@ -1018,7 +1065,7 @@ def _shutdown_dialog_callback(dialog, response_id, no_dialog_shutdown=False):
 
     clipeffectseditor.shutdown_polling()
     compositeeditor.shutdown_polling()
-    containeractions.shutdown_polling()
+
     
     # Save window dimensions on exit
     alloc = gui.editor_window.window.get_allocation()
@@ -1063,5 +1110,12 @@ def _app_destroy():
     except:
         print("Delete autosave file FAILED!")
 
-    # Exit gtk main loop.
-    Gtk.main_quit()
+    do_gtk_main_quit = jobs.handle_shutdown(get_instance_autosave_file())
+    
+    # Exit gtk main loop if no jobs unfinished.
+    if do_gtk_main_quit == True:
+        Gtk.main_quit()
+    else:
+        # Jobs lauches its own top level window to show progress on unfinished jobs renders
+        # and does Gtk.main_quit() later when done.
+        pass

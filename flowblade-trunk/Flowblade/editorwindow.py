@@ -177,6 +177,7 @@ class EditorWindow:
         self.tline_box = Gtk.HBox()
         if editorpersistance.prefs.tools_selection == appconsts.TOOL_SELECTOR_IS_LEFT_DOCK:
             self.tline_box.pack_start(self.tool_dock, False, False, 0)
+        self.tline_box.pack_end(effectsdndsource.get_test_panel(), False, False, 0)
         self.tline_box.pack_end(tline_vbox_frame, True, True, 0)
         
         # Timeline pane
